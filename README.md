@@ -9,6 +9,10 @@ Features:
 - Place to log how much you slept the night before
 - Place to log physical activity done 
 - Weekly aggregates
+- Weekly/Monthly Goals
+
+Maybe:
+- Peer to Peer sharing
 
 
 Software:
