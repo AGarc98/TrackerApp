@@ -12,8 +12,9 @@ Features:
 - Weekly/Monthly Goals
 
 Maybe:
-- Peer to Peer sharing
+- Peer to Peer sharing (prob not)
 
 
 Software:
 - React Native
+- SQLite
