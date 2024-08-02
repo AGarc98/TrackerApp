@@ -1,6 +1,6 @@
 // components/AddItemForm.tsx
 import { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const AddItemForm: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
@@ -10,8 +10,22 @@ const AddItemForm: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newItem = { name, quantity, description };
-    await addDoc(collection(db, 'inventory'), newItem);
+
+    const itemsRef = collection(db, 'inventory');
+    const q = query(itemsRef, where('name', '==', name), where('description', '==', description));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      // Item exists, update the quantity
+      const itemDoc = querySnapshot.docs[0];
+      const newQuantity = itemDoc.data().quantity + quantity;
+      await updateDoc(doc(db, 'inventory', itemDoc.id), { quantity: newQuantity });
+    } else {
+      // Item does not exist, add a new item
+      const newItem = { name, quantity, description };
+      await addDoc(collection(db, 'inventory'), newItem);
+    }
+
     setName('');
     setQuantity(0);
     setDescription('');
