@@ -1,0 +1,59 @@
+🏗️ PrivateLift: System Design Document (v1.1)
+1. System Architecture: The "Central Hub" Model
+To support your vision of the desktop as a high-capacity storage vault, the architecture transitions from a simple peer-to-peer sync to a Primary/Secondary synchronization model.
+Desktop (The Vault): Acts as the master repository. It handles long-term storage of high-resolution progress photos and the full historical archive.
+Mobile (The Field Unit): Optimized for performance and immediate data entry. It can hold a subset of data (e.g., the last 6 months) or the full set, depending on user preference.
+Two-Way Sync: * Discovery: Desktop app displays a QR code containing its local IP and a session token.
+Protocol: Mobile scans and initiates a WebSocket or REST over LAN connection.
+Conflict Resolution: "Last Write Wins" based on a last_modified timestamp column in every table.
+
+2. Updated Database Schema
+We are adding muscle group categorization and "Base Content" flags to support the pre-populated library.
+2.1 Enums & New Columns
+Muscle_Group (Enum): CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, LEGS_QUADS, LEGS_HAMS, CALVES, CORE, CARDIO.
+Table: Exercises
+muscle_group: Enum (Mandatory).
+is_base_content: Boolean (True for app-provided exercises; prevents accidental deletion).
+last_modified: Timestamp (For sync logic).
+Table: User_Biometrics
+photo_path: Local URI (Standard filesystem access).
+2.2 Seeding Logic
+On the first launch (Initial Boot), the app executes a seed.sql script. This populates the Exercises and Routines tables with a "Solid Base" (e.g., PPL, Upper/Lower, 5x5) so the user isn't starting with a blank slate.
+
+3. UI/UX Segmentation: Tracker vs. Architect
+To maintain a clean "Gym Floor" experience, the app is split into two distinct functional zones.
+3.1 The "Athlete" Zone (Primary Tracking)
+Focus: Speed and low friction.
+Views: Today’s Workout, Active Session (The Engine), and Quick-Log Biometrics.
+UI: Large touch targets, minimal text entry, high contrast for gym environments.
+3.2 The "Architect" Zone (Management)
+Focus: Customization and granular control.
+Access: A dedicated "Management" or "Library" tab.
+Functionality: * Exercise Editor: Add/Edit muscle groups, descriptions, and type enums.
+Routine Builder: Drag-and-drop interface to sequence workouts into "Cycles."
+Sync Dashboard: Manage connections to the Desktop vault.
+
+4. Advanced Analytics Engine
+The analytics module will move beyond simple graphs into a Configurable Data Grid (Pivot Table style).
+4.1 The Pivot Logic
+The user can "Group By" and "Filter By" three main dimensions:
+Temporal: View by Day, Week, Month, or Cycle.
+Anatomical: Filter performance by Muscle Group (e.g., "Show me total volume for BACK this month").
+Specific: Filter by individual Exercise (e.g., "Show me 1RM progression for Deadlift").
+4.2 Key Metrics Calculated:
+Volume Load: (Sets × Reps × Weight).
+Intensity: Average % of e1RM used per session.
+Frequency: Days trained per muscle group over a rolling 30-day window.
+
+5. Data Portability & Photos
+5.1 Storage Logic
+Progress Photos: Stored in a standard PrivateLift/Media/ folder in the user's Documents/Files directory. No obfuscation is applied, allowing users to move them manually if desired.
+Export/Import: * The app generates a .zip (or .plift) container.
+Contents: data.json (SQL Dump) + media/ (All photos).
+Encryption: The entire container is encrypted with AES-256 if the user provides a passkey at the time of export.
+
+6. Technical Implementation Details
+Desktop Navigation: Horizontal Top Nav or Permanent Sidebar for the "Architect" pages to utilize the wider aspect ratio.
+Mobile UI: Tab-based navigation with a prominent "Start" button.
+Sync Security: Since it's Wi-Fi based, the app will check if the SSID is "Private" before allowing a handshake, or simply rely on the QR code's unique session token.
+

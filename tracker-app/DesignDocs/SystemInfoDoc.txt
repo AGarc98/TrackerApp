@@ -1,0 +1,44 @@
+🛠️ Project Environment & Standards: PrivateLift
+1. Development Environment
+
+    OS: Windows 11 Pro
+
+    Node.js: v24.12.0
+
+    Package Manager: npm
+
+    Primary IDE: VS Code
+
+    Language: TypeScript (Strict Mode)
+
+2. Tech Stack & Frameworks
+
+    Cross-Platform: React Native
+
+    Desktop Target: react-native-windows (Native, no Electron)
+
+    Styling: Tailwind CSS (via NativeWind v4+)
+
+    Database: react-native-quick-sqlite
+
+    Icons: react-native-vector-icons (Lucide or Material community sets)
+
+3. Architecture & Standards
+
+    Component Pattern: Functional Components with Hooks.
+
+    Directory Structure:
+
+        /src/components: UI Atomic components.
+
+        /src/screens: Top-level page views.
+
+        /src/database: Schema definitions and SQLite repository logic.
+
+        /src/hooks: Custom hooks for active session logic and analytics.
+
+        /src/store: Context API providers.
+
+        /src/types: Global TypeScript interfaces.
+
+    Styling Rule: Use Tailwind classes (className or tw prop) exclusively. Avoid inline StyleSheet.create unless native performance overrides are required.

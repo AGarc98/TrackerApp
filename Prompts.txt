@@ -1,0 +1,90 @@
+Phase 1: The Foundation (Database & Architect CRUD)
+
+Objective: Set up the "Brain" of the app and the administrative tools to manage the exercise library.
+
+    Prompt 1:
+    "Using the attached SRS and Design Doc, initialize a React Native project (targeting iOS and Windows).
+
+        Set up the SQLite database using react-native-quick-sqlite.
+
+        Implement the schema defined in Section 2 of the Design Doc, including the Muscle_Group enums, the Exercises table with the is_base_content flag, and the Routines tables.
+
+        Create a 'seed' script to populate the initial list of muscle groups.
+
+        Build the 'Architect Zone' Exercise Editor: a dedicated management page where I can Create, Read, Update, and Delete exercises. Use a simple, clean UI library or custom styles as per the design doc."
+
+Phase 2: The "Active Session" Engine
+
+Objective: Build the core logic that handles the actual workout tracking and data persistence.
+
+    Prompt 2:
+    "Referencing the 'Active Session Engine' (Section 3) and 'Athlete Zone' (Section 3.1) of the Design Doc:
+
+        Implement the Draft_Sets table for session persistence.
+
+        Create a React Context-based state manager to handle an active workout.
+
+        Build the logic to:
+
+            Start a workout (cloning a Routine into Draft_Sets).
+
+            Perform 'Volatile Swapping' of an exercise for the current session only.
+
+            Handle the 'Finish' action using an atomic SQL transaction to move data from Drafts to Logged_Sessions and Logged_Sets.
+
+        Ensure that if the app is closed and reopened, it checks Draft_Sets and prompts to 'Resume' the workout."
+
+Phase 3: Desktop Implementation & Navigation
+
+Objective: Pivot to the Windows-specific experience and the Master-Detail layout.
+
+    Prompt 3:
+    "Now focus on the Windows Desktop implementation.
+
+        Implement the 'Fixed Sidebar Navigation' described in Section 6.1.
+
+        Create the 'Master-Detail' view for Routines: selecting a routine in the sidebar should show its details and history in the main content pane.
+
+        Implement keyboard listeners for desktop: Ctrl+N to start a new workout, Ctrl+S to finish/save, and Tab/Enter navigation for rep/weight input fields.
+
+        Ensure the UI responds to hover states for data points as specified in the SRS."
+
+Phase 4: Data Vault & Local Sync
+
+Objective: Build the privacy-first sync and encryption features.
+
+    Prompt 4:
+    "Implement the 'Central Hub' sync model and security features from Sections 4 and 5 of the Design Doc.
+
+        Create a JSON Export/Import utility. Include an option to encrypt the exported file using AES-256-GCM with a user-provided passkey.
+
+        Build the Local Network Sync:
+
+            Desktop: Logic to generate a QR code containing the Local IP and a session token.
+
+            Mobile: Logic to scan the QR, connect via LAN, and perform a 'Two-Way Sync' using 'Last Write Wins' logic via the last_modified column.
+
+        Ensure progress photos are stored in a standard local directory (PrivateLift/Media) and included in the export container."
+
+Phase 5: Analytics & "Athlete" Experience
+
+Objective: Finalize the user-facing data visualization and UX polish.
+
+    Prompt 5:
+    "Finalize the 'Athlete Zone' and Analytics module (Section 4 and 7).
+
+        Implement the Epley Formula for e1RM calculations based on logged sets.
+
+        Build the 'Configurable Data Grid' (Pivot Table) for the Analytics page. Users must be able to group and filter data by: Date, Muscle Group, and Exercise.
+
+        Implement the 'Hard Stop' rest day logic in the settings: if enabled, prevent starting a new cycle until a calendar day has passed.
+
+        Connect the Progress Photo gallery to display images from the local filesystem associated with specific dates/biometrics."
+
+Tips for working with the AI Agent:
+
+    One Step at a Time: Don't feed all 5 prompts at once. Wait for the agent to finish Phase 1 and verify the database is working before moving to the Engine.
+
+    Ask for Tests: For Phase 2 (The Engine), specifically tell the AI: "Write a unit test to ensure that the SQL Transaction rolls back if one set fails to save." This is crucial for a "robust" design.
+
+    Verify Filesystem Access: Since you are using React Native for Windows, remind the AI to use native modules that are compatible with the Windows filesystem (like react-native-fs or Windows-specific equivalents).

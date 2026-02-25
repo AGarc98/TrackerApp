@@ -1,0 +1,199 @@
+
+🏛️ Master SRS: PrivateLift (Version 1.0)
+1. Project Vision
+A privacy-first, local-only fitness architect and tracker built for high-performance users. It prioritizes flexibility (Async vs. Weekly scheduling) and data ownership, allowing users to build complex routines and track granular progress without cloud dependency.
+
+2. Functional Requirements
+2.1 The Exercise Atom
+Definition: The smallest unit of data. Must include a Name and Description.
+Enums (Type): Every exercise must have a type assigned to define UI input fields:
+STRENGTH: (Weight + Reps)
+BODYWEIGHT: (Reps only)
+ENDURANCE: (Distance + Time)
+ISOMETRIC: (Time only)
+WEIGHTED_BW: (Added Weight + Reps)
+2.2 Scheduling & Logic
+Routine Modes:
+Weekly: Workouts mapped to specific days (Mon, Wed, Fri).
+Async: A sequential queue. Completing all workouts in a routine constitutes one "Cycle."
+Rest Day Logic: In Async Mode, the app suggests one rest day automatically after every completed cycle.
+Lifecycle: Routines have a set duration (e.g., 12 weeks). Upon completion, the user is prompted to Re-queue (restart) or Queue New (choose another routine).
+2.3 The "Active Session" Engine (The Gym Floor)
+Volatile Swapping:
+Exercise Level: Replace one exercise for another for the current session only.
+Workout Level: Perform a different workout from the routine than the one scheduled for today (e.g., swapping Leg Day and Back Day).
+Calendar Sync: If enabled, any session swap must update the system calendar to prevent "Planned vs. Actual" discrepancies.
+Integrated Rest Timer: * Trigger: Automatically starts upon logging a set (Weight/Reps entry).
+Customization: Users can set default rest periods per exercise (e.g., 3 mins for Squats, 90s for Curls).
+UX: Visual countdown on the active session screen; system notification/beep when the timer hits zero.
+Session Persistence (Crash Recovery): The app must write every input to a volatile "Draft" state immediately. If the app is closed or crashes, it must prompt the user to "Resume Session" upon restart.
+2.4 Data & Analytics
+Insights: Secondary screen for extrapolated data: Estimated 1-Rep Max (e1RM) and Total Volume (Sets × Reps × Weight).
+Biometrics: Local-only tracking of body weight and progress photos (saved via file path).
+Temporal Logic: All metrics (Total Volume, Tonnage, Frequency) are attributed to the Session Start Date. A workout starting at 11:45 PM on Monday and ending at 1:00 AM on Tuesday counts as a Monday workout.
+
+3. Database Schema (SQLite)
+Table: Exercises
+Column
+Type
+Description
+id
+UUID
+Primary Key
+name
+String
+Exercise Name
+description
+Text
+Instructions/Notes
+type
+Enum
+Strength, Bodyweight, etc.
+
+Table: Workouts
+Column
+Type
+Description
+id
+UUID
+Primary Key
+name
+String
+e.g., "Heavy Pull"
+
+Table: Workout_Exercises (Mapping)
+Column
+Type
+Description
+id
+UUID
+Primary Key
+workout_id
+FK
+Links to Workouts
+exercise_id
+FK
+Links to Exercises
+order
+Int
+Position in the workout
+target_sets
+Int
+Default sets for this workout
+
+Table: Routines
+Column
+Type
+Description
+id
+UUID
+Primary Key
+name
+String
+e.g., "5/3/1 Strength"
+mode
+Enum
+Weekly vs. Async
+duration
+Int
+Total weeks/cycles planned
+cycle_count
+Int
+Progress tracking for the routine
+
+Table: Routine_Workouts (New: The "Glue" Table)
+Column
+Type
+Description
+id
+UUID
+Primary Key
+routine_id
+FK
+Links to Routines
+workout_id
+FK
+Links to Workouts
+order_index
+Int
+Sequence in Async mode or Day Index in Weekly mode
+
+
+Table: Logged_Sessions (Historical)
+Column
+Type
+Description
+id
+UUID
+Primary Key
+workout_id
+FK
+The workout being performed
+timestamp
+DateTime
+When the workout started
+is_swapped
+Boolean
+True if this was a workout-level swap
+
+Table: Logged_Sets
+Column
+Type
+Description
+id
+UUID
+Primary Key
+session_id
+FK
+Links to Logged_Sessions
+exercise_id
+FK
+The exercise performed (handles swaps)
+weight
+Float
+Weight used
+reps
+Int
+Reps completed
+time_ms
+Int
+Duration (for Endurance/Isometric)
+is_skipped
+bool
+True if the user opter to skip this planned set
+
+Table: User_Biometrics (New)
+Column
+Type
+Description
+id
+UUID
+Primary Key
+timestamp
+DateTime
+When the measurement was taken
+body_weight
+Float
+In user's preferred unit (kg/lbs)
+body_fat_pct
+Float
+Optional percentage
+photo_path
+String
+Local filesystem path to progress image
+
+Table: Draft_Sets (New: Recovery Table)
+This table is cleared only when a session is explicitly "Finished" or "Discarded". | Column | Type | Description | | :--- | :--- | :--- | | id | UUID | Primary Key | | exercise_id | FK | Current exercise being performed | | input_data | JSON/Text | Raw string of sets/reps entered but not yet committed to history |
+
+
+4. Technical & UX Specifications
+4.1 Platform & Portability
+Framework: React Native for cross-platform iOS and Desktop deployment.
+Desktop UX: Master-Detail navigation, Keyboard shortcuts (Cmd+Enter to finish), Hover states for data points, and Drag-and-Drop for routine building.
+Local Storage: SQLite for data; Filesystem for images.
+4.2 Privacy & Security
+Import/Export: Full data portability via JSON.
+Encryption: Optional AES-256 encryption on exported JSON files using a user-provided password.
+4.3 Data Resilience
+Atomic Commits: When finishing a workout, the transition from Draft_Sets to Logged_Sessions and Logged_Sets must happen within a single SQLite transaction to prevent partial data logging.
+
