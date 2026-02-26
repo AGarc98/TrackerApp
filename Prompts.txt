@@ -3,9 +3,9 @@ Phase 1: The Foundation (Database & Architect CRUD)
 Objective: Set up the "Brain" of the app and the administrative tools to manage the exercise library.
 
     Prompt 1:
-    "Using the attached SRS and Design Doc, initialize a React Native project (targeting iOS and Windows).
+    "Using the attached SRS and Design Doc, we will implement a React Native project (targeting Mobile, we will create the desktop app later).
 
-        Set up the SQLite database using react-native-quick-sqlite.
+        The main app initialization has been set up.
 
         Implement the schema defined in Section 2 of the Design Doc, including the Muscle_Group enums, the Exercises table with the is_base_content flag, and the Routines tables.
 
