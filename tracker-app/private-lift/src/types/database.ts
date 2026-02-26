@@ -40,6 +40,7 @@ export interface WorkoutExercise {
   exercise_id: string;
   order: number;
   target_sets: number;
+  target_reps: number;
 }
 
 export enum RoutineMode {
@@ -85,4 +86,38 @@ export interface UserBiometrics {
   body_weight: number;
   body_fat_pct?: number;
   photo_path?: string;
+}
+
+export interface SetData {
+  id: string;
+  weight?: number;
+  reps?: number;
+  time_ms?: number;
+  is_skipped: boolean;
+  is_completed: boolean;
+}
+
+export interface UserSettings {
+  id: number;
+  active_routine_id: string | null;
+  unit_system: 'KG' | 'LBS';
+  rest_timer_enabled: boolean;
+  rest_timer_sound: boolean;
+  calendar_sync_enabled: boolean;
+  last_sync_timestamp: number | null;
+  vault_connection_token: string | null;
+}
+
+export interface ActiveSession {
+  id: string;
+  workout_id: string;
+  timestamp: number;
+  is_swapped: boolean;
+}
+
+export interface DraftSet {
+  id: string;
+  session_id: string;
+  exercise_id: string;
+  input_data: string; // JSON string of SetData[]
 }

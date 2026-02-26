@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS Workout_Exercises (
   exercise_id TEXT NOT NULL,
   order_index INTEGER NOT NULL,
   target_sets INTEGER NOT NULL,
+  target_reps INTEGER NOT NULL,
   FOREIGN KEY (workout_id) REFERENCES Workouts (id) ON DELETE CASCADE,
   FOREIGN KEY (exercise_id) REFERENCES Exercises (id) ON DELETE CASCADE
 );
@@ -69,10 +70,23 @@ CREATE TABLE IF NOT EXISTS User_Biometrics (
   photo_path TEXT
 );
 
-CREATE TABLE IF NOT EXISTS Draft_Sets (
+CREATE TABLE IF NOT EXISTS Active_Session (
   id TEXT PRIMARY KEY NOT NULL,
-  exercise_id TEXT NOT NULL,
-  input_data TEXT NOT NULL, -- JSON string
-  FOREIGN KEY (exercise_id) REFERENCES Exercises (id)
+  workout_id TEXT NOT NULL,
+  timestamp INTEGER NOT NULL,
+  is_swapped INTEGER DEFAULT 0,
+  FOREIGN KEY (workout_id) REFERENCES Workouts (id)
+);
+
+CREATE TABLE IF NOT EXISTS User_Settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  active_routine_id TEXT,
+  unit_system TEXT DEFAULT 'KG', -- KG or LBS
+  rest_timer_enabled INTEGER DEFAULT 1, -- Boolean
+  rest_timer_sound INTEGER DEFAULT 1, -- Boolean
+  calendar_sync_enabled INTEGER DEFAULT 0, -- Boolean
+  last_sync_timestamp INTEGER,
+  vault_connection_token TEXT,
+  FOREIGN KEY (active_routine_id) REFERENCES Routines (id)
 );
 `;

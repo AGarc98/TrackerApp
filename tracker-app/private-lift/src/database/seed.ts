@@ -16,20 +16,29 @@ const BASE_EXERCISES = [
 
 export const seedDatabase = async () => {
   try {
+    // 1. Seed Exercises
     const result = query('SELECT COUNT(*) as count FROM Exercises WHERE is_base_content = 1;');
-    // result.rows is an array of objects
     const count = (result.rows?._array[0] as any)?.count || 0;
 
     if (count === 0) {
       console.log('Seeding base exercises...');
       for (const ex of BASE_EXERCISES) {
-        const id = Math.random().toString(36).substring(2, 15); // Simple ID generation
+        const id = Math.random().toString(36).substring(2, 15);
         query(
           'INSERT INTO Exercises (id, name, description, type, muscle_group, is_base_content, last_modified) VALUES (?, ?, ?, ?, ?, 1, ?);',
           [id, ex.name, ex.description, ex.type, ex.muscle_group, Date.now()]
         );
       }
       console.log('Seeding completed.');
+    }
+
+    // 2. Initialize User Settings
+    const settingsResult = query('SELECT COUNT(*) as count FROM User_Settings;');
+    const settingsCount = (settingsResult.rows?._array[0] as any)?.count || 0;
+
+    if (settingsCount === 0) {
+      console.log('Initializing user settings...');
+      query('INSERT INTO User_Settings (id, unit_system, rest_timer_enabled, rest_timer_sound, calendar_sync_enabled) VALUES (1, "KG", 1, 1, 0);');
     }
   } catch (error) {
     console.error('Failed to seed database:', error);
