@@ -34,9 +34,10 @@ export const SettingsZone = () => {
   const updateSetting = (key: string, value: any) => {
     try {
       const dbValue = typeof value === 'boolean' ? (value ? 1 : 0) : value;
+      const lastModified = Date.now();
       // Using direct string concat for the key name is safe here as keys are from a controlled set
-      query('UPDATE User_Settings SET ' + key + ' = ? WHERE id = 1;', [dbValue]);
-      setSettings(prev => prev ? { ...prev, [key]: value } : null);
+      query('UPDATE User_Settings SET ' + key + ' = ?, last_modified = ? WHERE id = 1;', [dbValue, lastModified]);
+      setSettings(prev => prev ? { ...prev, [key]: value, last_modified: lastModified } : null);
     } catch (error) {
       console.error('Update failed:', error);
     }
@@ -73,7 +74,7 @@ export const SettingsZone = () => {
               <View className="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
                 <View 
                   className="h-full bg-blue-600 rounded-full" 
-                  style={{ width: `\${Math.min((activeRoutine.cycle_count / (activeRoutine.duration || 1)) * 100, 100)}%` }} 
+                  style={{ width: `${Math.min((activeRoutine.cycle_count / (activeRoutine.duration || 1)) * 100, 100)}%` }} 
                 />
               </View>
             </View>
@@ -87,8 +88,8 @@ export const SettingsZone = () => {
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-slate-900">Unit System</Text><Text className="text-xs text-slate-400">Weight standard</Text></View>
             <View className="flex-row bg-slate-50 p-1 rounded-xl">
-              <TouchableOpacity onPress={() => updateSetting('unit_system', 'KG')} className={`px-4 py-2 rounded-lg \${settings.unit_system === 'KG' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black \${settings.unit_system === 'KG' ? 'text-blue-600' : 'text-slate-400'}`}>KG</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => updateSetting('unit_system', 'LBS')} className={`px-4 py-2 rounded-lg \${settings.unit_system === 'LBS' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black \${settings.unit_system === 'LBS' ? 'text-blue-600' : 'text-slate-400'}`}>LBS</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => updateSetting('unit_system', 'KG')} className={`px-4 py-2 rounded-lg ${settings.unit_system === 'KG' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${settings.unit_system === 'KG' ? 'text-blue-600' : 'text-slate-400'}`}>KG</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => updateSetting('unit_system', 'LBS')} className={`px-4 py-2 rounded-lg ${settings.unit_system === 'LBS' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${settings.unit_system === 'LBS' ? 'text-blue-600' : 'text-slate-400'}`}>LBS</Text></TouchableOpacity>
             </View>
           </View>
           <View className="flex-row justify-between items-center mb-6">

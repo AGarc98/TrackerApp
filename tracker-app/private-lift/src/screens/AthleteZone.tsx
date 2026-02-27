@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { useWorkout } from '../store/WorkoutContext';
 import { query } from '../database/db';
-import { Exercise, Workout, SetData } from '../types/database';
+import { Exercise, Workout, SetData, Routine, RoutineMode } from '../types/database';
 import { SettingsZone } from './SettingsZone';
 
 export const AthleteZone = () => {
-  const { activeSession, draftSets, logSet, startWorkout, finishWorkout, discardWorkout, swapExercise } = useWorkout();
+  const { activeSession, activeRoutineId, draftSets, logSet, startWorkout, finishWorkout, discardWorkout, swapExercise } = useWorkout();
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
 
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [activeRoutineId]);
 
   const loadInitialData = async () => {
     const wResult = query('SELECT * FROM Workouts;');
@@ -21,36 +22,63 @@ export const AthleteZone = () => {
     
     const eResult = query('SELECT * FROM Exercises;');
     setExercises(eResult.rows?._array || []);
+
+    if (activeRoutineId) {
+      const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
+      setActiveRoutine(rResult.rows?._array[0] || null);
+    } else {
+      setActiveRoutine(null);
+    }
   };
 
   const handleStartDefault = async () => {
-    // Check for an active routine in settings
-    const settings = query('SELECT active_routine_id FROM User_Settings WHERE id = 1;');
-    const activeRoutineId = (settings.rows?._array[0] as any)?.active_routine_id;
+    let targetWorkout: Workout | null = null;
+    let workoutExercises: { exercise: Exercise; target_sets: number; target_reps: number }[] = [];
 
-    let targetWorkout = availableWorkouts[0];
-    
-    // Logic to pick the next workout in routine could go here
-    // For now, keeping the simplified "Start" logic
+    if (activeRoutineId) {
+      // Get the next workout in the routine
+      const mappingsResult = query('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutineId]);
+      const mappings = mappingsResult.rows?._array || [];
+      
+      if (mappings.length > 0) {
+        // Simple logic: pick workout based on cycle_count % mappings.length
+        const cycleCount = activeRoutine?.cycle_count || 0;
+        const nextMapping = mappings[cycleCount % mappings.length];
+        const workoutResult = query('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]);
+        targetWorkout = workoutResult.rows?._array[0] || null;
 
-    if (!targetWorkout) {
-      const id = Math.random().toString(36).substring(2, 15);
-      query('INSERT INTO Workouts (id, name) VALUES (?, ?);', [id, 'Hypertrophy Alpha']);
-      targetWorkout = { id, name: 'Hypertrophy Alpha' };
+        if (targetWorkout) {
+          const exResult = query('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+          workoutExercises = (exResult.rows?._array || []).map(we => ({
+            exercise: exercises.find(e => e.id === we.exercise_id)!,
+            target_sets: we.target_sets,
+            target_reps: we.target_reps
+          })).filter(item => item.exercise !== undefined);
+        }
+      }
     }
 
-    const selectedExercises = exercises.slice(0, 4).map(ex => ({
-      exercise: ex,
-      target_sets: 3,
-      target_reps: 10
-    }));
+    // Fallback if no routine/workout found
+    if (!targetWorkout || workoutExercises.length === 0) {
+      targetWorkout = availableWorkouts[0];
+      if (!targetWorkout) {
+        Alert.alert('Vault Empty', 'Architect some workouts and routines first.');
+        return;
+      }
+      const exResult = query('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+      workoutExercises = (exResult.rows?._array || []).map(we => ({
+        exercise: exercises.find(e => e.id === we.exercise_id)!,
+        target_sets: we.target_sets,
+        target_reps: we.target_reps
+      })).filter(item => item.exercise !== undefined);
+    }
 
-    if (selectedExercises.length === 0) {
-      Alert.alert('Vault Empty', 'Architect some exercises first.');
+    if (workoutExercises.length === 0) {
+      Alert.alert('Empty Workout', 'This workout has no exercises assigned.');
       return;
     }
 
-    await startWorkout(targetWorkout, selectedExercises);
+    await startWorkout(targetWorkout, workoutExercises);
   };
 
   const updateSet = (exerciseId: string, setIndex: number, updates: Partial<SetData>) => {
@@ -70,20 +98,32 @@ export const AthleteZone = () => {
           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vault</Text>
         </TouchableOpacity>
 
-        <View className="bg-white p-10 rounded-[50px] shadow-2xl shadow-slate-200 items-center border border-slate-100">
+        <View className="bg-white p-10 rounded-[50px] shadow-2xl shadow-slate-200 items-center border border-slate-100 w-full">
           <View className="w-20 h-20 bg-blue-600 rounded-3xl items-center justify-center mb-6 rotate-12 shadow-lg shadow-blue-300">
             <Text className="text-white text-4xl font-black">L</Text>
           </View>
           <Text className="text-3xl font-black text-slate-900 mb-2 tracking-tighter text-center">Athlete Zone</Text>
-          <Text className="text-slate-400 font-medium text-center mb-10 leading-5">
-            Your session vault is ready.{"\n"}Initiate training directive?
-          </Text>
+          
+          {activeRoutine ? (
+            <View className="items-center mb-10">
+              <Text className="text-blue-600 font-black uppercase tracking-widest text-[10px] mb-1">Active Routine</Text>
+              <Text className="text-slate-900 font-bold text-lg">{activeRoutine.name}</Text>
+              <Text className="text-slate-400 font-medium text-xs">Progress: {activeRoutine.cycle_count} Cycles</Text>
+            </View>
+          ) : (
+            <Text className="text-slate-400 font-medium text-center mb-10 leading-5">
+              Your session vault is ready.{"\n"}Initiate training directive?
+            </Text>
+          )}
+
           <TouchableOpacity
             onPress={handleStartDefault}
             activeOpacity={0.8}
             className="bg-slate-900 w-full py-6 rounded-3xl shadow-xl shadow-slate-300"
           >
-            <Text className="text-white text-lg font-black text-center uppercase tracking-widest">Start Session</Text>
+            <Text className="text-white text-lg font-black text-center uppercase tracking-widest">
+              {activeRoutine ? 'Next Workout' : 'Start Session'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -137,7 +177,7 @@ export const AthleteZone = () => {
                       const otherExercises = exercises.filter(e => !draftSets[e.id]);
                       if (otherExercises.length > 0) {
                         const random = otherExercises[Math.floor(Math.random() * otherExercises.length)];
-                        Alert.alert('Volatile Swap', `Swap \${exercise?.name} for \${random.name}?`, [
+                        Alert.alert('Volatile Swap', `Swap ${exercise?.name} for ${random.name}?`, [
                           { text: 'Cancel', style: 'cancel' },
                           { text: 'Swap', onPress: () => swapExercise(exerciseId, random.id) }
                         ]);
@@ -151,10 +191,10 @@ export const AthleteZone = () => {
                 
                 {sets.map((set, index) => (
                   <View key={set.id} className="flex-row items-center mb-3">
-                    <View className={`w-10 h-10 rounded-2xl justify-center items-center mr-3 \${
+                    <View className={`w-10 h-10 rounded-2xl justify-center items-center mr-3 ${
                       set.is_completed ? 'bg-green-100' : 'bg-slate-50'
                     }`}>
-                      <Text className={`font-black \${set.is_completed ? 'text-green-600' : 'text-slate-300'}`}>
+                      <Text className={`font-black ${set.is_completed ? 'text-green-600' : 'text-slate-300'}`}>
                         {index + 1}
                       </Text>
                     </View>
@@ -180,7 +220,7 @@ export const AthleteZone = () => {
                     <TouchableOpacity
                       onPress={() => updateSet(exerciseId, index, { is_completed: !set.is_completed })}
                       activeOpacity={0.7}
-                      className={`w-14 h-14 rounded-2xl justify-center items-center ml-3 shadow-sm \${
+                      className={`w-14 h-14 rounded-2xl justify-center items-center ml-3 shadow-sm ${
                         set.is_completed ? 'bg-green-500 shadow-green-200' : 'bg-slate-100 border border-slate-200'
                       }`}
                     >

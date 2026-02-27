@@ -21,7 +21,7 @@ export const initDatabase = async () => {
     // Ensure User_Settings exists
     const check = db.getAllSync('SELECT COUNT(*) as count FROM User_Settings;');
     if ((check[0] as any).count === 0) {
-      db.runSync('INSERT INTO User_Settings (id, unit_system) VALUES (1, "KG");');
+      db.runSync('INSERT INTO User_Settings (id, unit_system, last_modified) VALUES (1, "KG", ?);', [Date.now()]);
     }
 
     console.log('Database initialized successfully with fresh schema');

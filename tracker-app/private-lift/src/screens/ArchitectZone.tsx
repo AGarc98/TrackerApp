@@ -21,12 +21,11 @@ interface UIDay {
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export const ArchitectZone = () => {
-  const { setActiveRoutine } = useWorkout();
+  const { setActiveRoutine, activeRoutineId } = useWorkout();
   const [activeSubTab, setActiveSubTab] = useState<'routines' | 'days' | 'exercises'>('routines');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [days, setDays] = useState<Workout[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
-  const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
   
   // Modals visibility
   const [exerciseModalVisible, setExerciseModalVisible] = useState(false);
@@ -48,18 +47,17 @@ export const ArchitectZone = () => {
   }, [activeSubTab]);
 
   const loadData = async () => {
-    const settings = query('SELECT active_routine_id FROM User_Settings WHERE id = 1;');
-    setActiveRoutineId((settings.rows?._array[0] as any)?.active_routine_id || null);
+    try {
+      const eResult = query('SELECT * FROM Exercises ORDER BY name ASC;') as any;
+      setExercises(eResult.rows?._array || []);
 
-    if (activeSubTab === 'exercises') {
-      const result = query('SELECT * FROM Exercises ORDER BY name ASC;');
-      setExercises(result.rows?._array || []);
-    } else if (activeSubTab === 'days') {
-      const result = query('SELECT * FROM Workouts ORDER BY name ASC;');
-      setDays(result.rows?._array || []);
-    } else {
-      const result = query('SELECT * FROM Routines ORDER BY name ASC;');
-      setRoutines(result.rows?._array || []);
+      const dResult = query('SELECT * FROM Workouts ORDER BY name ASC;') as any;
+      setDays(dResult.rows?._array || []);
+
+      const rResult = query('SELECT * FROM Routines ORDER BY name ASC;') as any;
+      setRoutines(rResult.rows?._array || []);
+    } catch (e) {
+      console.error('Failed to load Architect data:', e);
     }
   };
 
@@ -83,16 +81,17 @@ export const ArchitectZone = () => {
     if (!editingDay?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const dayId = editingDay.id || Math.random().toString(36).substring(2, 15);
+      const lastModified = Date.now();
       db.withTransactionSync(() => {
         if (editingDay.id) {
-          db.runSync('UPDATE Workouts SET name = ? WHERE id = ?;', [editingDay.name, editingDay.id]);
+          db.runSync('UPDATE Workouts SET name = ?, last_modified = ? WHERE id = ?;', [editingDay.name, lastModified, editingDay.id]);
           db.runSync('DELETE FROM Workout_Exercises WHERE workout_id = ?;', [editingDay.id]);
         } else {
-          db.runSync('INSERT INTO Workouts (id, name) VALUES (?, ?);', [dayId, editingDay.name]);
+          db.runSync('INSERT INTO Workouts (id, name, last_modified) VALUES (?, ?, ?);', [dayId, editingDay.name, lastModified]);
         }
         editingDay.exercises.forEach((ex, idx) => {
-          db.runSync('INSERT INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps) VALUES (?, ?, ?, ?, ?, ?);',
-            [Math.random().toString(36).substring(2, 15), dayId, ex.exercise_id, idx, ex.target_sets, ex.target_reps]);
+          db.runSync('INSERT INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
+            [Math.random().toString(36).substring(2, 15), dayId, ex.exercise_id, idx, ex.target_sets, ex.target_reps, lastModified]);
         });
       });
       setDayModalVisible(false);
@@ -104,15 +103,16 @@ export const ArchitectZone = () => {
     if (!editingRoutine?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const rId = editingRoutine.id || Math.random().toString(36).substring(2, 15);
+      const lastModified = Date.now();
       db.withTransactionSync(() => {
         if (editingRoutine.id) {
-          db.runSync('UPDATE Routines SET name = ?, mode = ?, duration = ? WHERE id = ?;', [editingRoutine.name, editingRoutine.mode, editingRoutine.duration, editingRoutine.id]);
+          db.runSync('UPDATE Routines SET name = ?, mode = ?, duration = ?, last_modified = ? WHERE id = ?;', [editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified, editingRoutine.id]);
           db.runSync('DELETE FROM Routine_Workouts WHERE routine_id = ?;', [editingRoutine.id]);
         } else {
-          db.runSync('INSERT INTO Routines (id, name, mode, duration, cycle_count) VALUES (?, ?, ?, ?, 0);', [rId, editingRoutine.name, editingRoutine.mode, editingRoutine.duration]);
+          db.runSync('INSERT INTO Routines (id, name, mode, duration, cycle_count, last_modified) VALUES (?, ?, ?, ?, 0, ?);', [rId, editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified]);
         }
         editingRoutine.workout_mappings.forEach((wId, idx) => {
-          if (wId) db.runSync('INSERT INTO Routine_Workouts (id, routine_id, workout_id, order_index) VALUES (?, ?, ?, ?);', [Math.random().toString(36).substring(2, 15), rId, wId, idx]);
+          if (wId) db.runSync('INSERT INTO Routine_Workouts (id, routine_id, workout_id, order_index, last_modified) VALUES (?, ?, ?, ?, ?);', [Math.random().toString(36).substring(2, 15), rId, wId, idx, lastModified]);
         });
       });
       setRoutineModalVisible(false);
@@ -121,7 +121,7 @@ export const ArchitectZone = () => {
   };
 
   const openExercisePicker = (callback: (id: string, name: string) => void) => {
-    const res = query('SELECT * FROM Exercises ORDER BY name ASC;');
+    const res = query('SELECT * FROM Exercises ORDER BY name ASC;') as any;
     setExercises(res.rows?._array || []);
     setPickerType('exercise');
     setCurrentPickerCallback(() => callback);
@@ -129,7 +129,7 @@ export const ArchitectZone = () => {
   };
 
   const openDayPicker = (callback: (id: string, name: string) => void) => {
-    const res = query('SELECT * FROM Workouts ORDER BY name ASC;');
+    const res = query('SELECT * FROM Workouts ORDER BY name ASC;') as any;
     setDays(res.rows?._array || []);
     setPickerType('day');
     setCurrentPickerCallback(() => callback);
@@ -139,7 +139,7 @@ export const ArchitectZone = () => {
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     const isActive = item.id === activeRoutineId;
     return (
-      <View className={`bg-white p-6 mb-4 rounded-[32px] shadow-sm border \${isActive ? 'border-blue-500' : 'border-slate-100'}`}>
+      <View className={`bg-white p-6 mb-4 rounded-[32px] shadow-sm border ${isActive ? 'border-blue-500' : 'border-slate-100'}`}>
         <View className="flex-row justify-between items-start mb-4">
           <View className="flex-1 mr-4">
             <Text className="text-xl font-black text-slate-900 mb-1">{item.name}</Text>
@@ -162,8 +162,7 @@ export const ArchitectZone = () => {
             <TouchableOpacity onPress={async () => {
               const newId = isActive ? null : item.id;
               await setActiveRoutine(newId);
-              setActiveRoutineId(newId);
-            }} className={`p-3 rounded-2xl \${isActive ? 'bg-rose-50' : 'bg-blue-600'}`}><Text className={`font-bold text-xs \${isActive ? 'text-rose-500' : 'text-white'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
+            }} className={`p-3 rounded-2xl ${isActive ? 'bg-rose-50' : 'bg-blue-600'}`}><Text className={`font-bold text-xs ${isActive ? 'text-rose-500' : 'text-white'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
           </View>
         </View>
         <Text className="text-slate-400 text-[10px] font-black uppercase tracking-[2px]">Progress: {item.cycle_count} Completed</Text>
@@ -179,7 +178,7 @@ export const ArchitectZone = () => {
           <View className="flex-row mt-2 space-x-4">
             {['routines', 'days', 'exercises'].map((tab) => (
               <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab as any)}>
-                <Text className={`text-xs font-black uppercase tracking-widest \${activeSubTab === tab ? 'text-blue-600' : 'text-slate-300'}`}>{tab}</Text>
+                <Text className={`text-xs font-black uppercase tracking-widest ${activeSubTab === tab ? 'text-blue-600' : 'text-slate-300'}`}>{tab}</Text>
                 {activeSubTab === tab && <View className="h-1 bg-blue-600 rounded-full mt-1 w-full" />}
               </TouchableOpacity>
             ))}
@@ -193,7 +192,7 @@ export const ArchitectZone = () => {
       </View>
 
       <FlatList
-        data={activeSubTab === 'exercises' ? exercises : activeSubTab === 'days' ? days : routines}
+        data={(activeSubTab === 'exercises' ? exercises : activeSubTab === 'days' ? days : routines) as any[]}
         renderItem={activeSubTab === 'routines' ? renderRoutineItem : ({ item }: any) => (
           <View className="bg-white p-5 mb-3 rounded-3xl shadow-sm flex-row justify-between items-center border border-slate-100">
             <View className="flex-1 mr-4">
@@ -203,7 +202,7 @@ export const ArchitectZone = () => {
             <TouchableOpacity onPress={async () => {
               if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
               else if (activeSubTab === 'days') {
-                const exResult = query('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
+                const exResult = query('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]) as any;
                 setEditingDay({ id: item.id, name: item.name, exercises: (exResult.rows?._array || []).map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
                 setDayModalVisible(true);
               }
@@ -229,7 +228,13 @@ export const ArchitectZone = () => {
                 <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Muscle Group</Text>
                 <View className="flex-row flex-wrap mb-6">
                   {Object.values(MuscleGroup).map(mg => (
-                    <TouchableOpacity key={mg} onPress={() => setEditingExercise({ ...editingExercise!, muscle_group: mg })} className={`px-3 py-1.5 m-1 rounded-lg border \${editingExercise?.muscle_group === mg ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-[10px] font-bold \${editingExercise?.muscle_group === mg ? 'text-white' : 'text-slate-500'}`}>{mg}</Text></TouchableOpacity>
+                    <TouchableOpacity key={mg} onPress={() => setEditingExercise({ ...editingExercise!, muscle_group: mg })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.muscle_group === mg ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-[10px] font-bold ${editingExercise?.muscle_group === mg ? 'text-white' : 'text-slate-500'}`}>{mg}</Text></TouchableOpacity>
+                  ))}
+                </View>
+                <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Exercise Type</Text>
+                <View className="flex-row flex-wrap mb-6">
+                  {Object.values(ExerciseType).map(et => (
+                    <TouchableOpacity key={et} onPress={() => setEditingExercise({ ...editingExercise!, type: et })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.type === et ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-[10px] font-bold ${editingExercise?.type === et ? 'text-white' : 'text-slate-500'}`}>{et.replace('_', ' ')}</Text></TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
@@ -289,10 +294,18 @@ export const ArchitectZone = () => {
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
               <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Hypertrophy Plan" value={editingRoutine?.name} onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, name: t })} />
+              <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Duration (Cycles)</Text>
+              <TextInput 
+                className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" 
+                placeholder="e.g. 12" 
+                keyboardType="numeric"
+                value={editingRoutine?.duration?.toString()} 
+                onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, duration: parseInt(t) || 0 })} 
+              />
               <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Logic Mode</Text>
               <View className="flex-row mb-6">
                 {Object.values(RoutineMode).map((m) => (
-                  <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border \${editingRoutine?.mode === m ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest \${editingRoutine?.mode === m ? 'text-white' : 'text-slate-400'}`}>{m}</Text></TouchableOpacity>
+                  <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-white' : 'text-slate-400'}`}>{m}</Text></TouchableOpacity>
                 ))}
               </View>
               {editingRoutine?.mode === RoutineMode.WEEKLY ? (
@@ -340,8 +353,8 @@ export const ArchitectZone = () => {
       </Modal>
 
       {/* Shared Picker Modal */}
-      <Modal visible={pickerVisible} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 justify-center p-6">
+      <Modal visible={pickerVisible} transparent animationType="fade" statusBarTranslucent>
+        <View className="flex-1 bg-black/60 justify-center p-6">
           <View className="bg-white rounded-[40px] p-6 max-h-[80%]">
             <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-slate-400">Select {pickerType}</Text>
             <FlatList
