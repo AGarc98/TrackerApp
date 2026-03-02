@@ -136,6 +136,33 @@ export const ArchitectZone = () => {
     setPickerVisible(true);
   };
 
+  const renderPickerOverlay = () => {
+    if (!pickerVisible) return null;
+    return (
+      <View className="absolute inset-0 bg-slate-900/80 justify-center p-6 z-[1000] rounded-t-[40px]">
+        <View className="bg-white rounded-[40px] p-6 max-h-[80%] shadow-2xl">
+          <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-slate-400">Select {pickerType}</Text>
+          <FlatList
+            data={pickerType === 'exercise' ? exercises : days}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                onPress={() => { if (currentPickerCallback) currentPickerCallback(item.id, item.name); setPickerVisible(false); }} 
+                className="p-4 border-b border-slate-50 active:bg-slate-50"
+              >
+                <Text className="font-bold text-slate-900 text-lg">{item.name}</Text>
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+          />
+          <TouchableOpacity onPress={() => setPickerVisible(false)} className="mt-6 bg-slate-100 p-4 rounded-2xl items-center">
+            <Text className="font-black text-slate-400 uppercase tracking-widest">Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     const isActive = item.id === activeRoutineId;
     return (
@@ -217,10 +244,10 @@ export const ArchitectZone = () => {
       <Modal visible={exerciseModalVisible} animationType="fade" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
           <View className="flex-1 justify-end bg-slate-900/60">
-            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl">
+            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
               <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-slate-900 mb-6">Exercise Detail</Text>
-              <ScrollView showsVerticalScrollIndicator={false} className="max-h-[70%]">
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
                 <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
                 <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="Exercise Name" value={editingExercise?.name} onChangeText={(t) => setEditingExercise({ ...editingExercise!, name: t })} />
                 <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Vault Description</Text>
@@ -249,124 +276,113 @@ export const ArchitectZone = () => {
 
       {/* Day Architect Modal */}
       <Modal visible={dayModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-slate-900/60">
-          <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
-            <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
-            <Text className="text-2xl font-black text-slate-900 mb-6">Day Architect</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Label</Text>
-              <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Push Day" value={editingDay?.name} onChangeText={(t) => setEditingDay({ ...editingDay!, name: t })} />
-              <View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Exercises</Text>
-                <TouchableOpacity onPress={() => openExercisePicker((id, name) => {
-                  setEditingDay(prev => prev ? { ...prev, exercises: [...prev.exercises, { id: Math.random().toString(36).substring(2, 9), exercise_id: id, name, target_sets: 3, target_reps: 10 }] } : null);
-                })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
-              </View>
-              {editingDay?.exercises.map((ex, idx) => (
-                <View key={idx} className="bg-slate-50 rounded-3xl p-5 mb-3 border border-slate-100">
-                  <View className="flex-row justify-between items-center mb-4"><Text className="text-sm font-black text-slate-900 flex-1">{ex.name}</Text>
-                    <TouchableOpacity onPress={() => { const newExs = [...editingDay.exercises]; newExs.splice(idx, 1); setEditingDay({ ...editingDay, exercises: newExs }); }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
-                  </View>
-                  <View className="flex-row space-x-2">
-                    <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Sets</Text>
-                      <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
-                    </View>
-                    <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Reps</Text>
-                      <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_reps.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
-                    </View>
-                  </View>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-slate-900/60">
+            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+              <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
+              <Text className="text-2xl font-black text-slate-900 mb-6">Day Architect</Text>
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Label</Text>
+                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Push Day" value={editingDay?.name} onChangeText={(t) => setEditingDay({ ...editingDay!, name: t })} />
+                <View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Exercises</Text>
+                  <TouchableOpacity onPress={() => openExercisePicker((id, name) => {
+                    setEditingDay(prev => prev ? { ...prev, exercises: [...prev.exercises, { id: Math.random().toString(36).substring(2, 9), exercise_id: id, name, target_sets: 3, target_reps: 10 }] } : null);
+                  })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
                 </View>
-              ))}
-            </ScrollView>
-            <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
-              <TouchableOpacity onPress={() => setDayModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveDay} className="flex-[2] bg-slate-900 py-5 rounded-2xl"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Day</Text></TouchableOpacity>
+                {editingDay?.exercises.map((ex, idx) => (
+                  <View key={idx} className="bg-slate-50 rounded-3xl p-5 mb-3 border border-slate-100">
+                    <View className="flex-row justify-between items-center mb-4"><Text className="text-sm font-black text-slate-900 flex-1">{ex.name}</Text>
+                      <TouchableOpacity onPress={() => { const newExs = [...editingDay.exercises]; newExs.splice(idx, 1); setEditingDay({ ...editingDay, exercises: newExs }); }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
+                    </View>
+                    <View className="flex-row space-x-2">
+                      <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Sets</Text>
+                        <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                      </View>
+                      <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Reps</Text>
+                        <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_reps.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
+                <TouchableOpacity onPress={() => setDayModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveDay} className="flex-[2] bg-slate-900 py-5 rounded-2xl"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Day</Text></TouchableOpacity>
+              </View>
+              {renderPickerOverlay()}
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Routine Blueprint Modal */}
       <Modal visible={routineModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-slate-900/60">
-          <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
-            <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
-            <Text className="text-2xl font-black text-slate-900 mb-6">Routine Blueprint</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
-              <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Hypertrophy Plan" value={editingRoutine?.name} onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, name: t })} />
-              <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Duration (Cycles)</Text>
-              <TextInput 
-                className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" 
-                placeholder="e.g. 12" 
-                keyboardType="numeric"
-                value={editingRoutine?.duration?.toString()} 
-                onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, duration: parseInt(t) || 0 })} 
-              />
-              <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Logic Mode</Text>
-              <View className="flex-row mb-6">
-                {Object.values(RoutineMode).map((m) => (
-                  <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-white' : 'text-slate-400'}`}>{m}</Text></TouchableOpacity>
-                ))}
-              </View>
-              {editingRoutine?.mode === RoutineMode.WEEKLY ? (
-                <View>{WEEK_DAYS.map((dayName, idx) => (
-                  <View key={dayName} className="flex-row justify-between items-center mb-3 bg-slate-50 p-4 rounded-2xl border border-slate-100"><Text className="text-sm font-black text-slate-900">{dayName}</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-slate-900/60">
+            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+              <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
+              <Text className="text-2xl font-black text-slate-900 mb-6">Routine Blueprint</Text>
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
+                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Hypertrophy Plan" value={editingRoutine?.name} onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, name: t })} />
+                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Duration (Cycles)</Text>
+                <TextInput 
+                  className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" 
+                  placeholder="e.g. 12" 
+                  keyboardType="numeric"
+                  value={editingRoutine?.duration?.toString()} 
+                  onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, duration: parseInt(t) || 0 })} 
+                />
+                <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Logic Mode</Text>
+                <View className="flex-row mb-6">
+                  {Object.values(RoutineMode).map((m) => (
+                    <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-white' : 'text-slate-400'}`}>{m}</Text></TouchableOpacity>
+                  ))}
+                </View>
+                {editingRoutine?.mode === RoutineMode.WEEKLY ? (
+                  <View>{WEEK_DAYS.map((dayName, idx) => (
+                    <View key={dayName} className="flex-row justify-between items-center mb-3 bg-slate-50 p-4 rounded-2xl border border-slate-100"><Text className="text-sm font-black text-slate-900">{dayName}</Text>
+                      <TouchableOpacity onPress={() => openDayPicker((id) => {
+                        setEditingRoutine(prev => {
+                          if (!prev) return null;
+                          const newMaps = [...prev.workout_mappings];
+                          newMaps[idx] = id;
+                          return { ...prev, workout_mappings: newMaps };
+                        });
+                      })} className="bg-white px-4 py-2 rounded-xl border border-slate-200"><Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text></TouchableOpacity>
+                    </View>
+                  ))}</View>
+                ) : (
+                  <View><View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Queue Sequence</Text>
                     <TouchableOpacity onPress={() => openDayPicker((id) => {
                       setEditingRoutine(prev => {
                         if (!prev) return null;
-                        const newMaps = [...prev.workout_mappings];
-                        newMaps[idx] = id;
-                        return { ...prev, workout_mappings: newMaps };
+                        return { ...prev, workout_mappings: [...prev.workout_mappings, id] };
                       });
-                    })} className="bg-white px-4 py-2 rounded-xl border border-slate-200"><Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text></TouchableOpacity>
+                    })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
                   </View>
-                ))}</View>
-              ) : (
-                <View><View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Queue Sequence</Text>
-                  <TouchableOpacity onPress={() => openDayPicker((id) => {
-                    setEditingRoutine(prev => {
-                      if (!prev) return null;
-                      return { ...prev, workout_mappings: [...prev.workout_mappings, id] };
-                    });
-                  })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
-                </View>
-                {editingRoutine?.workout_mappings.map((wId, idx) => (
-                  <View key={idx} className="flex-row justify-between items-center mb-2 bg-slate-50 p-4 rounded-2xl"><Text className="text-sm font-black text-slate-900">{idx + 1}. {days.find(d => d.id === wId)?.name || 'Workout Day'}</Text>
-                    <TouchableOpacity onPress={() => {
-                      setEditingRoutine(prev => {
-                        if (!prev) return null;
-                        const newMaps = [...prev.workout_mappings];
-                        newMaps.splice(idx, 1);
-                        return { ...prev, workout_mappings: newMaps };
-                      });
-                    }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
-                  </View>
-                ))}</View>
-              )}
-            </ScrollView>
-            <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
-              <TouchableOpacity onPress={() => setRoutineModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveRoutine} className="flex-[2] bg-slate-900 py-5 rounded-2xl shadow-xl shadow-slate-200"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Blueprint</Text></TouchableOpacity>
+                  {editingRoutine?.workout_mappings.map((wId, idx) => (
+                    <View key={idx} className="flex-row justify-between items-center mb-2 bg-slate-50 p-4 rounded-2xl"><Text className="text-sm font-black text-slate-900">{idx + 1}. {days.find(d => d.id === wId)?.name || 'Workout Day'}</Text>
+                      <TouchableOpacity onPress={() => {
+                        setEditingRoutine(prev => {
+                          if (!prev) return null;
+                          const newMaps = [...prev.workout_mappings];
+                          newMaps.splice(idx, 1);
+                          return { ...prev, workout_mappings: newMaps };
+                        });
+                      }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
+                    </View>
+                  ))}</View>
+                )}
+              </ScrollView>
+              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
+                <TouchableOpacity onPress={() => setRoutineModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveRoutine} className="flex-[2] bg-slate-900 py-5 rounded-2xl shadow-xl shadow-slate-200"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Blueprint</Text></TouchableOpacity>
+              </View>
+              {renderPickerOverlay()}
             </View>
           </View>
-        </View>
-      </Modal>
-
-      {/* Shared Picker Modal */}
-      <Modal visible={pickerVisible} transparent animationType="fade" statusBarTranslucent>
-        <View className="flex-1 bg-black/60 justify-center p-6">
-          <View className="bg-white rounded-[40px] p-6 max-h-[80%]">
-            <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-slate-400">Select {pickerType}</Text>
-            <FlatList
-              data={pickerType === 'exercise' ? exercises : days}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => { if (currentPickerCallback) currentPickerCallback(item.id, item.name); setPickerVisible(false); }} className="p-4 border-b border-slate-50"><Text className="font-bold text-slate-900">{item.name}</Text></TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity onPress={() => setPickerVisible(false)} className="mt-4 p-4 items-center"><Text className="font-black text-slate-400 uppercase tracking-widest">Close</Text></TouchableOpacity>
-          </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

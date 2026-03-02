@@ -9,7 +9,7 @@ export const initDatabase = async () => {
     db.execSync('PRAGMA foreign_keys = ON;');
     
     // FORCE RESET: Uncommented to ensure the new schema (including session_id) is applied.
-    db.execSync('DROP TABLE IF EXISTS Draft_Sets; DROP TABLE IF EXISTS Active_Session; DROP TABLE IF EXISTS User_Settings; DROP TABLE IF EXISTS Logged_Sets; DROP TABLE IF EXISTS Logged_Sessions; DROP TABLE IF EXISTS Routine_Workouts; DROP TABLE IF EXISTS Workout_Exercises; DROP TABLE IF EXISTS Routines; DROP TABLE IF EXISTS Workouts; DROP TABLE IF EXISTS Exercises;');
+    db.execSync('DROP TABLE IF EXISTS Draft_Sets; DROP TABLE IF EXISTS User_Biometrics; DROP TABLE IF EXISTS Active_Session; DROP TABLE IF EXISTS User_Settings; DROP TABLE IF EXISTS Logged_Sets; DROP TABLE IF EXISTS Logged_Sessions; DROP TABLE IF EXISTS Routine_Workouts; DROP TABLE IF EXISTS Workout_Exercises; DROP TABLE IF EXISTS Routines; DROP TABLE IF EXISTS Workouts; DROP TABLE IF EXISTS Exercises;');
 
     // Split SCHEMA_V1 into individual statements
     const statements = SCHEMA_V1.split(';').filter(s => s.trim() !== '');

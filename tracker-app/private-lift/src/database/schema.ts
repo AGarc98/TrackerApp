@@ -49,10 +49,12 @@ CREATE TABLE IF NOT EXISTS Routine_Workouts (
 CREATE TABLE IF NOT EXISTS Logged_Sessions (
   id TEXT PRIMARY KEY NOT NULL,
   workout_id TEXT NOT NULL,
+  routine_id TEXT, -- NEW: Track which routine this session belongs to
   timestamp INTEGER NOT NULL,
   is_swapped INTEGER DEFAULT 0,
   last_modified INTEGER NOT NULL, -- Timestamp
-  FOREIGN KEY (workout_id) REFERENCES Workouts (id)
+  FOREIGN KEY (workout_id) REFERENCES Workouts (id),
+  FOREIGN KEY (routine_id) REFERENCES Routines (id)
 );
 
 CREATE TABLE IF NOT EXISTS Logged_Sets (
@@ -80,11 +82,13 @@ CREATE TABLE IF NOT EXISTS User_Biometrics (
 CREATE TABLE IF NOT EXISTS Active_Session (
   id TEXT PRIMARY KEY NOT NULL,
   workout_id TEXT NOT NULL,
+  routine_id TEXT, -- NEW: Track which routine this active session belongs to
   timestamp INTEGER NOT NULL,
   is_swapped INTEGER DEFAULT 0,
   draft_data TEXT, -- JSON blob for crash recovery/volatile swapping state
   last_modified INTEGER NOT NULL, -- Timestamp
-  FOREIGN KEY (workout_id) REFERENCES Workouts (id)
+  FOREIGN KEY (workout_id) REFERENCES Workouts (id),
+  FOREIGN KEY (routine_id) REFERENCES Routines (id)
 );
 
 CREATE TABLE IF NOT EXISTS User_Settings (

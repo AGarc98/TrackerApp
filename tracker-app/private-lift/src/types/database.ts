@@ -70,6 +70,7 @@ export interface RoutineWorkout {
 export interface LoggedSession {
   id: string;
   workout_id: string;
+  routine_id: string | null;
   timestamp: number;
   is_swapped: boolean;
   last_modified: number; // Timestamp

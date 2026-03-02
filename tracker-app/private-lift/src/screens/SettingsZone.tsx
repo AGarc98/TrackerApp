@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Modal } from 'react-native';
 import { query } from '../database/db';
 import { UserSettings, Routine } from '../types/database';
+import { useWorkout } from '../store/WorkoutContext';
+import { RoutineSelector } from '../components/RoutineSelector';
 
 export const SettingsZone = () => {
+  const { activeRoutineId } = useWorkout();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
+  const [routineSelectorVisible, setRoutineSelectorVisible] = useState(false);
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [activeRoutineId]);
 
   const loadSettings = async () => {
     try {
@@ -23,9 +27,11 @@ export const SettingsZone = () => {
           calendar_sync_enabled: !!s.calendar_sync_enabled,
         };
         setSettings(formattedSettings);
-        if (formattedSettings.active_routine_id) {
-          const rResult = query('SELECT * FROM Routines WHERE id = ?;', [formattedSettings.active_routine_id]);
+        if (activeRoutineId) {
+          const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
           setActiveRoutine(rResult.rows?._array[0] as Routine || null);
+        } else {
+          setActiveRoutine(null);
         }
       }
     } catch (e) { console.error('Failed to load settings:', e); }
@@ -35,7 +41,6 @@ export const SettingsZone = () => {
     try {
       const dbValue = typeof value === 'boolean' ? (value ? 1 : 0) : value;
       const lastModified = Date.now();
-      // Using direct string concat for the key name is safe here as keys are from a controlled set
       query('UPDATE User_Settings SET ' + key + ' = ?, last_modified = ? WHERE id = 1;', [dbValue, lastModified]);
       setSettings(prev => prev ? { ...prev, [key]: value, last_modified: lastModified } : null);
     } catch (error) {
@@ -61,7 +66,13 @@ export const SettingsZone = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-slate-100">
-          <Text className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Current Directive</Text>
+          <View className="flex-row justify-between items-start mb-4">
+            <Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Current Directive</Text>
+            <TouchableOpacity onPress={() => setRoutineSelectorVisible(true)}>
+              <Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{activeRoutine ? 'Change' : 'Set Plan'}</Text>
+            </TouchableOpacity>
+          </View>
+          
           {activeRoutine ? (
             <View>
               <Text className="text-2xl font-black text-slate-900 mb-1">{activeRoutine.name}</Text>
@@ -108,6 +119,17 @@ export const SettingsZone = () => {
           <TouchableOpacity onPress={handleExport} className="bg-white/10 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-black text-xs uppercase tracking-widest">Generate Export</Text></TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal visible={routineSelectorVisible} animationType="slide" presentationStyle="pageSheet">
+        <View className="flex-1 bg-slate-50 pt-4">
+          <View className="flex-row justify-end px-6">
+            <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
+              <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <RoutineSelector onClose={() => setRoutineSelectorVisible(false)} />
+        </View>
+      </Modal>
     </View>
   );
 };
