@@ -21,6 +21,12 @@ interface WorkoutContextType {
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
+// Robust ID generation for local environment
+const generateId = () => {
+  const S4 = () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+  return `${S4()}${S4()}-${S4()}-${S4()}-${S4()}-${S4()}${S4()}${S4()}`;
+};
+
 export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
@@ -106,14 +112,14 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number }[], routineId: string | null = null) => {
     try {
-      const sessionId = Math.random().toString(36).substring(2, 15);
+      const sessionId = generateId();
       const timestamp = Date.now();
       const lastModified = timestamp;
 
       const initialDrafts: Record<string, SetData[]> = {};
       exercises.forEach(ex => {
         initialDrafts[ex.exercise.id] = Array.from({ length: ex.target_sets }, () => ({
-          id: Math.random().toString(36).substring(2, 9),
+          id: generateId().substring(0, 8),
           is_skipped: false,
           is_completed: false,
           reps: ex.target_reps
@@ -164,6 +170,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const oldSets = draftSets[oldExerciseId] || [];
       const newSets: SetData[] = oldSets.map(s => ({
         ...s,
+        id: generateId().substring(0, 8), // New IDs for swapped movement sets
         is_completed: false,
       }));
 
@@ -203,7 +210,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
               db.runSync(
                 'INSERT INTO Logged_Sets (id, session_id, exercise_id, weight, reps, time_ms, is_skipped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
                 [
-                  Math.random().toString(36).substring(2, 15),
+                  generateId(),
                   activeSession.id,
                   exerciseId,
                   set.weight || null,
@@ -228,7 +235,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const sessionsLogged = (loggedRes[0] as any)?.count || 0;
 
           // If we just finished the last workout of a cycle, increment cycle_count
-          if (sessionsLogged % routineWorkoutCount === 0) {
+          if (sessionsLogged > 0 && sessionsLogged % routineWorkoutCount === 0) {
             db.runSync('UPDATE Routines SET cycle_count = cycle_count + 1, last_modified = ? WHERE id = ?;', [lastModified, activeSession.routine_id]);
           }
         }

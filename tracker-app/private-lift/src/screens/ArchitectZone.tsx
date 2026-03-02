@@ -198,33 +198,49 @@ export const ArchitectZone = () => {
   };
 
   return (
-    <View className="flex-1 bg-slate-50 p-4 pt-8">
-      <View className="flex-row justify-between items-center mb-6 px-2">
-        <View className="flex-1">
-          <Text className="text-3xl font-black text-slate-900 tracking-tighter">Architect</Text>
-          <View className="flex-row mt-2 space-x-4">
-            {['routines', 'days', 'exercises'].map((tab) => (
-              <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab as any)}>
-                <Text className={`text-xs font-black uppercase tracking-widest ${activeSubTab === tab ? 'text-blue-600' : 'text-slate-300'}`}>{tab}</Text>
-                {activeSubTab === tab && <View className="h-1 bg-blue-600 rounded-full mt-1 w-full" />}
-              </TouchableOpacity>
-            ))}
+    <View className="flex-1 bg-slate-50">
+      <View className="px-6 pt-6 pb-4 bg-slate-50">
+        <View className="flex-row justify-between items-center">
+          <View className="flex-row items-center space-x-3">
+            <View className="w-8 h-8 bg-slate-900 rounded-xl items-center justify-center rotate-6 shadow-md shadow-slate-300">
+              <Text className="text-white text-base font-black italic">A</Text>
+            </View>
+            <Text className="text-2xl font-black text-slate-900 tracking-tighter">Architect</Text>
           </View>
+          
+          <TouchableOpacity 
+            onPress={() => {
+              if (activeSubTab === 'exercises') { setEditingExercise({ name: '', muscle_group: MuscleGroup.CHEST, type: ExerciseType.STRENGTH, description: '' }); setExerciseModalVisible(true); }
+              else if (activeSubTab === 'days') { setEditingDay({ id: '', name: '', exercises: [] }); setDayModalVisible(true); }
+              else { setEditingRoutine({ name: '', mode: RoutineMode.ASYNC, duration: 12, workout_mappings: [] }); setRoutineModalVisible(true); }
+            }}
+            activeOpacity={0.8}
+            className="bg-blue-600 px-5 py-3 rounded-2xl shadow-lg shadow-blue-200"
+          >
+            <Text className="text-white font-black text-xs uppercase tracking-widest">+ New</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => {
-          if (activeSubTab === 'exercises') { setEditingExercise({ name: '', muscle_group: MuscleGroup.CHEST, type: ExerciseType.STRENGTH, description: '' }); setExerciseModalVisible(true); }
-          else if (activeSubTab === 'days') { setEditingDay({ id: '', name: '', exercises: [] }); setDayModalVisible(true); }
-          else { setEditingRoutine({ name: '', mode: RoutineMode.ASYNC, duration: 12, workout_mappings: [] }); setRoutineModalVisible(true); }
-        }} className="bg-blue-600 px-5 py-4 rounded-3xl shadow-lg shadow-blue-200"><Text className="text-white font-black text-sm">+ Add</Text></TouchableOpacity>
+
+        <View className="flex-row mt-6 space-x-6">
+          {['routines', 'days', 'exercises'].map((tab) => (
+            <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab as any)} className="relative pb-2">
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] ${activeSubTab === tab ? 'text-blue-600' : 'text-slate-400'}`}>{tab}</Text>
+              {activeSubTab === tab && <View className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <FlatList
         data={(activeSubTab === 'exercises' ? exercises : activeSubTab === 'days' ? days : routines) as any[]}
+        contentContainerStyle={{ padding: 16 }}
         renderItem={activeSubTab === 'routines' ? renderRoutineItem : ({ item }: any) => (
-          <View className="bg-white p-5 mb-3 rounded-3xl shadow-sm flex-row justify-between items-center border border-slate-100">
+          <View className="bg-white p-6 mb-4 rounded-[32px] shadow-sm flex-row justify-between items-center border border-slate-100">
             <View className="flex-1 mr-4">
-              <Text className="text-lg font-bold text-slate-900 mb-1">{item.name}</Text>
-              <View className="flex-row items-center"><View className="bg-slate-100 px-2 py-1 rounded-md mr-2"><Text className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{activeSubTab === 'exercises' ? item.muscle_group : 'Workout Blueprint'}</Text></View></View>
+              <Text className="text-lg font-black text-slate-900 mb-1 tracking-tight">{item.name}</Text>
+              <View className="bg-slate-50 self-start px-2 py-1 rounded-lg border border-slate-100">
+                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{activeSubTab === 'exercises' ? item.muscle_group : 'Workout Blueprint'}</Text>
+              </View>
             </View>
             <TouchableOpacity onPress={async () => {
               if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
@@ -233,7 +249,7 @@ export const ArchitectZone = () => {
                 setEditingDay({ id: item.id, name: item.name, exercises: (exResult.rows?._array || []).map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
                 setDayModalVisible(true);
               }
-            }} className="bg-slate-50 p-3 rounded-2xl border border-slate-100"><Text className="text-slate-600 font-semibold text-xs">Edit</Text></TouchableOpacity>
+            }} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shadow-sm"><Text className="text-slate-600 font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
           </View>
         )}
         keyExtractor={(item) => item.id}

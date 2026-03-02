@@ -25,7 +25,7 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
          WHERE rw.routine_id = ? 
          ORDER BY rw.order_index ASC;`,
         [routineId]
-      );
+      ) as any;
       setWorkouts(result.rows?._array || []);
     } catch (error) {
       console.error('Failed to load workouts for routine:', error);

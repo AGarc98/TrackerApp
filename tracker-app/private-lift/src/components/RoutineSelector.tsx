@@ -22,7 +22,7 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
 
   const loadRoutines = async () => {
     try {
-      const result = query('SELECT * FROM Routines ORDER BY name ASC;');
+      const result = query('SELECT * FROM Routines ORDER BY name ASC;') as any;
       setRoutines(result.rows?._array || []);
     } catch (error) {
       console.error('Failed to load routines:', error);

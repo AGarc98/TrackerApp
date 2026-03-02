@@ -14,7 +14,7 @@ export const BiometricsLogger = () => {
 
   const loadLastEntry = async () => {
     try {
-      const result = query('SELECT body_weight FROM User_Biometrics ORDER BY timestamp DESC LIMIT 1;');
+      const result = query('SELECT body_weight FROM User_Biometrics ORDER BY timestamp DESC LIMIT 1;') as any;
       if (result.rows?._array.length > 0) {
         setLastWeight(result.rows?._array[0].body_weight);
       }
