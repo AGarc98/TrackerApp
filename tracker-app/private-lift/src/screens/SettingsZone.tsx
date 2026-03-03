@@ -6,46 +6,23 @@ import { useWorkout } from '../store/WorkoutContext';
 import { RoutineSelector } from '../components/RoutineSelector';
 
 export const SettingsZone = () => {
-  const { activeRoutineId } = useWorkout();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const { activeRoutineId, updateSettings, settings: contextSettings } = useWorkout();
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [routineSelectorVisible, setRoutineSelectorVisible] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    loadRoutine();
   }, [activeRoutineId]);
 
-  const loadSettings = async () => {
+  const loadRoutine = async () => {
     try {
-      const result = query('SELECT * FROM User_Settings WHERE id = 1;');
-      const s = result.rows?._array[0] as any;
-      if (s) {
-        const formattedSettings: UserSettings = {
-          ...s,
-          rest_timer_enabled: !!s.rest_timer_enabled,
-          rest_timer_sound: !!s.rest_timer_sound,
-          calendar_sync_enabled: !!s.calendar_sync_enabled,
-        };
-        setSettings(formattedSettings);
-        if (activeRoutineId) {
-          const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
-          setActiveRoutine(rResult.rows?._array[0] as Routine || null);
-        } else {
-          setActiveRoutine(null);
-        }
+      if (activeRoutineId) {
+        const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
+        setActiveRoutine(rResult.rows?._array[0] as Routine || null);
+      } else {
+        setActiveRoutine(null);
       }
-    } catch (e) { console.error('Failed to load settings:', e); }
-  };
-
-  const updateSetting = (key: string, value: any) => {
-    try {
-      const dbValue = typeof value === 'boolean' ? (value ? 1 : 0) : value;
-      const lastModified = Date.now();
-      query('UPDATE User_Settings SET ' + key + ' = ?, last_modified = ? WHERE id = 1;', [dbValue, lastModified]);
-      setSettings(prev => prev ? { ...prev, [key]: value, last_modified: lastModified } : null);
-    } catch (error) {
-      console.error('Update failed:', error);
-    }
+    } catch (e) { console.error('Failed to load routine:', e); }
   };
 
   const handleExport = async () => {
@@ -55,76 +32,94 @@ export const SettingsZone = () => {
     ]);
   };
 
-  if (!settings) return null;
+  if (!contextSettings) return null;
 
   return (
-    <View className="flex-1 bg-slate-50 p-4 pt-8">
+    <View className="flex-1 bg-background p-4 pt-8">
       <View className="mb-8 px-2">
-        <Text className="text-3xl font-black text-slate-900 tracking-tighter">Vault Settings</Text>
-        <Text className="text-slate-400 font-medium">Identity & System Preferences</Text>
+        <Text className="text-3xl font-black text-text-main tracking-tighter">Vault Settings</Text>
+        <Text className="text-text-muted font-medium">Identity & System Preferences</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-slate-100">
+        <View className="bg-surface rounded-[32px] p-6 mb-6 shadow-sm border border-border">
           <View className="flex-row justify-between items-start mb-4">
-            <Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Current Directive</Text>
+            <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Current Directive</Text>
             <TouchableOpacity onPress={() => setRoutineSelectorVisible(true)}>
-              <Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{activeRoutine ? 'Change' : 'Set Plan'}</Text>
+              <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{activeRoutine ? 'Change' : 'Set Plan'}</Text>
             </TouchableOpacity>
           </View>
           
           {activeRoutine ? (
             <View>
-              <Text className="text-2xl font-black text-slate-900 mb-1">{activeRoutine.name}</Text>
+              <Text className="text-2xl font-black text-text-main mb-1">{activeRoutine.name}</Text>
               <View className="flex-row items-center mb-4">
-                <View className="bg-blue-50 px-2 py-1 rounded-md mr-2">
-                  <Text className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{activeRoutine.mode}</Text>
+                <View className="bg-primary-soft px-2 py-1 rounded-md mr-2">
+                  <Text className="text-[10px] font-bold text-primary uppercase tracking-widest">{activeRoutine.mode}</Text>
                 </View>
-                <Text className="text-slate-400 text-xs font-bold">Progress: Cycle {activeRoutine.cycle_count + 1}</Text>
+                <Text className="text-text-muted text-xs font-bold">Progress: Cycle {activeRoutine.cycle_count + 1}</Text>
               </View>
-              <View className="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+              <View className="w-full h-2 bg-background rounded-full overflow-hidden">
                 <View 
-                  className="h-full bg-blue-600 rounded-full" 
+                  className="h-full bg-primary rounded-full" 
                   style={{ width: `${Math.min((activeRoutine.cycle_count / (activeRoutine.duration || 1)) * 100, 100)}%` }} 
                 />
               </View>
             </View>
           ) : (
-            <Text className="text-slate-300 font-bold italic text-center py-4">No active routine blueprint.</Text>
+            <Text className="text-text-muted font-bold italic text-center py-4">No active routine blueprint.</Text>
           )}
         </View>
 
-        <View className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-slate-100">
-          <Text className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Preferences</Text>
+        <View className="bg-surface rounded-[32px] p-6 mb-6 shadow-sm border border-border">
+          <Text className="text-xs font-black text-text-muted uppercase tracking-widest mb-6">Preferences</Text>
+          
+          <View className="mb-6">
+            <Text className="text-base font-bold text-text-main mb-3">Interface Theme</Text>
+            <View className="flex-row bg-background p-1.5 rounded-2xl">
+              {(['base', 'light', 'dark'] as const).map((t) => (
+                <TouchableOpacity 
+                  key={t}
+                  onPress={() => updateSettings({ theme: t })} 
+                  className={`flex-1 py-3 rounded-xl items-center ${contextSettings.theme === t ? 'bg-surface shadow-sm border border-border' : ''}`}
+                >
+                  <Text className={`text-[10px] font-black uppercase tracking-widest ${contextSettings.theme === t ? 'text-primary' : 'text-text-muted'}`}>
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <View className="flex-row justify-between items-center mb-6">
-            <View><Text className="text-base font-bold text-slate-900">Unit System</Text><Text className="text-xs text-slate-400">Weight standard</Text></View>
-            <View className="flex-row bg-slate-50 p-1 rounded-xl">
-              <TouchableOpacity onPress={() => updateSetting('unit_system', 'KG')} className={`px-4 py-2 rounded-lg ${settings.unit_system === 'KG' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${settings.unit_system === 'KG' ? 'text-blue-600' : 'text-slate-400'}`}>KG</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => updateSetting('unit_system', 'LBS')} className={`px-4 py-2 rounded-lg ${settings.unit_system === 'LBS' ? 'bg-white shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${settings.unit_system === 'LBS' ? 'text-blue-600' : 'text-slate-400'}`}>LBS</Text></TouchableOpacity>
+            <View><Text className="text-base font-bold text-text-main">Unit System</Text><Text className="text-xs text-text-muted">Weight standard</Text></View>
+            <View className="flex-row bg-background p-1 rounded-xl">
+              <TouchableOpacity onPress={() => updateSettings({ unit_system: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => updateSettings({ unit_system: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
             </View>
           </View>
           <View className="flex-row justify-between items-center mb-6">
-            <View><Text className="text-base font-bold text-slate-900">Rest Timer</Text><Text className="text-xs text-slate-400">Auto-countdown</Text></View>
-            <Switch value={settings.rest_timer_enabled} onValueChange={(v) => updateSetting('rest_timer_enabled', v)} trackColor={{ false: '#e2e8f0', true: '#3b82f6' }} />
+            <View><Text className="text-base font-bold text-text-main">Rest Timer</Text><Text className="text-xs text-text-muted">Auto-countdown</Text></View>
+            <Switch value={contextSettings.rest_timer_enabled} onValueChange={(v) => updateSettings({ rest_timer_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
           </View>
           <View className="flex-row justify-between items-center">
-            <View><Text className="text-base font-bold text-slate-900">Calendar Sync</Text><Text className="text-xs text-slate-400">Log to system</Text></View>
-            <Switch value={settings.calendar_sync_enabled} onValueChange={(v) => updateSetting('calendar_sync_enabled', v)} trackColor={{ false: '#e2e8f0', true: '#3b82f6' }} />
+            <View><Text className="text-base font-bold text-text-main">Calendar Sync</Text><Text className="text-xs text-text-muted">Log to system</Text></View>
+            <Switch value={contextSettings.calendar_sync_enabled} onValueChange={(v) => updateSettings({ calendar_sync_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
           </View>
         </View>
 
-        <View className="bg-slate-900 rounded-[32px] p-8 mb-12">
-          <Text className="text-white text-lg font-black mb-2 tracking-tight">Data Sovereignty</Text>
-          <Text className="text-slate-400 text-xs mb-8">All training data is stored locally. Exporting generates an AES-256 encrypted JSON vault.</Text>
-          <TouchableOpacity onPress={handleExport} className="bg-white/10 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-black text-xs uppercase tracking-widest">Generate Export</Text></TouchableOpacity>
+        <View className="bg-text-main rounded-[32px] p-8 mb-12">
+          <Text className="text-background text-lg font-black mb-2 tracking-tight">Data Sovereignty</Text>
+          <Text className="text-text-muted text-xs mb-8">All training data is stored locally. Exporting generates an AES-256 encrypted JSON vault.</Text>
+          <TouchableOpacity onPress={handleExport} className="bg-surface/10 py-4 rounded-2xl items-center border border-surface/10"><Text className="text-surface font-black text-xs uppercase tracking-widest">Generate Export</Text></TouchableOpacity>
         </View>
       </ScrollView>
 
       <Modal visible={routineSelectorVisible} animationType="slide" presentationStyle="pageSheet">
-        <View className="flex-1 bg-slate-50 pt-4">
+        <View className="flex-1 bg-background pt-4">
           <View className="flex-row justify-end px-6">
-            <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
-              <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Cancel</Text>
+            <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-primary-soft px-4 py-2 rounded-full">
+              <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
             </TouchableOpacity>
           </View>
           <RoutineSelector onClose={() => setRoutineSelectorVisible(false)} />

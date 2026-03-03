@@ -67,17 +67,17 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View className="flex-1 justify-center items-center bg-background">
+        <ActivityIndicator size="large" color="var(--color-primary)" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-background">
       <View className="p-6 pt-10">
-        <Text className="text-2xl font-black text-slate-900 mb-2">Swap Workout</Text>
-        <Text className="text-slate-400 font-medium mb-6">Select a different blueprint for this session.</Text>
+        <Text className="text-2xl font-black text-text-main mb-2">Swap Workout</Text>
+        <Text className="text-text-muted font-medium mb-6">Select a different blueprint for this session.</Text>
 
         <FlatList
           data={workouts}
@@ -87,11 +87,11 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
             <TouchableOpacity
               onPress={() => handleSelect(item)}
               activeOpacity={0.7}
-              className="bg-white p-6 mb-4 rounded-[32px] border border-slate-100 shadow-sm"
+              className="bg-surface p-6 mb-4 rounded-[32px] border border-border shadow-sm"
             >
-              <Text className="text-xl font-black text-slate-900 mb-1">{item.name}</Text>
-              <View className="bg-slate-100 self-start px-2 py-1 rounded-md">
-                <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Workout Blueprint</Text>
+              <Text className="text-xl font-black text-text-main mb-1">{item.name}</Text>
+              <View className="bg-background self-start px-2 py-1 rounded-md">
+                <Text className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Workout Blueprint</Text>
               </View>
             </TouchableOpacity>
           )}

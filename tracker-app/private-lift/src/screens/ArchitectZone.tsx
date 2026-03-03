@@ -139,24 +139,24 @@ export const ArchitectZone = () => {
   const renderPickerOverlay = () => {
     if (!pickerVisible) return null;
     return (
-      <View className="absolute inset-0 bg-slate-900/80 justify-center p-6 z-[1000] rounded-t-[40px]">
-        <View className="bg-white rounded-[40px] p-6 max-h-[80%] shadow-2xl">
-          <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-slate-400">Select {pickerType}</Text>
+      <View className="absolute inset-0 bg-text-main/80 justify-center p-6 z-[1000] rounded-t-[40px]">
+        <View className="bg-surface rounded-[40px] p-6 max-h-[80%] shadow-2xl">
+          <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-text-muted">Select {pickerType}</Text>
           <FlatList
             data={pickerType === 'exercise' ? exercises : days}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity 
                 onPress={() => { if (currentPickerCallback) currentPickerCallback(item.id, item.name); setPickerVisible(false); }} 
-                className="p-4 border-b border-slate-50 active:bg-slate-50"
+                className="p-4 border-b border-border active:bg-background"
               >
-                <Text className="font-bold text-slate-900 text-lg">{item.name}</Text>
+                <Text className="font-bold text-text-main text-lg">{item.name}</Text>
               </TouchableOpacity>
             )}
             showsVerticalScrollIndicator={false}
           />
-          <TouchableOpacity onPress={() => setPickerVisible(false)} className="mt-6 bg-slate-100 p-4 rounded-2xl items-center">
-            <Text className="font-black text-slate-400 uppercase tracking-widest">Close</Text>
+          <TouchableOpacity onPress={() => setPickerVisible(false)} className="mt-6 bg-background p-4 rounded-2xl items-center">
+            <Text className="font-black text-text-muted uppercase tracking-widest">Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -166,15 +166,15 @@ export const ArchitectZone = () => {
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     const isActive = item.id === activeRoutineId;
     return (
-      <View className={`bg-white p-6 mb-4 rounded-[32px] shadow-sm border ${isActive ? 'border-blue-500' : 'border-slate-100'}`}>
+      <View className={`bg-surface p-6 mb-4 rounded-[32px] shadow-sm border ${isActive ? 'border-primary' : 'border-border'}`}>
         <View className="flex-row justify-between items-start mb-4">
           <View className="flex-1 mr-4">
-            <Text className="text-xl font-black text-slate-900 mb-1">{item.name}</Text>
+            <Text className="text-xl font-black text-text-main mb-1">{item.name}</Text>
             <View className="flex-row items-center">
-              <View className="bg-blue-50 px-2 py-1 rounded-md mr-2">
-                <Text className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{item.mode}</Text>
+              <View className="bg-primary-soft px-2 py-1 rounded-md mr-2">
+                <Text className="text-[10px] font-bold text-primary uppercase tracking-widest">{item.mode}</Text>
               </View>
-              {isActive && <View className="bg-green-50 px-2 py-1 rounded-md"><Text className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Active</Text></View>}
+              {isActive && <View className="bg-success/10 px-2 py-1 rounded-md"><Text className="text-[10px] font-bold text-success uppercase tracking-widest">Active</Text></View>}
             </View>
           </View>
           <View className="flex-row">
@@ -185,27 +185,27 @@ export const ArchitectZone = () => {
               if (item.mode === RoutineMode.WEEKLY) mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
               setEditingRoutine({ ...item, workout_mappings });
               setRoutineModalVisible(true);
-            }} className="bg-slate-100 p-3 rounded-2xl mr-2"><Text className="text-slate-600 font-bold text-xs">Edit</Text></TouchableOpacity>
+            }} className="bg-background p-3 rounded-2xl mr-2"><Text className="text-text-muted font-bold text-xs">Edit</Text></TouchableOpacity>
             <TouchableOpacity onPress={async () => {
               const newId = isActive ? null : item.id;
               await setActiveRoutine(newId);
-            }} className={`p-3 rounded-2xl ${isActive ? 'bg-rose-50' : 'bg-blue-600'}`}><Text className={`font-bold text-xs ${isActive ? 'text-rose-500' : 'text-white'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
+            }} className={`p-3 rounded-2xl ${isActive ? 'bg-accent-soft' : 'bg-primary'}`}><Text className={`font-bold text-xs ${isActive ? 'text-accent' : 'text-surface'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
           </View>
         </View>
-        <Text className="text-slate-400 text-[10px] font-black uppercase tracking-[2px]">Progress: {item.cycle_count} Completed</Text>
+        <Text className="text-text-muted text-[10px] font-black uppercase tracking-[2px]">Progress: {item.cycle_count} Completed</Text>
       </View>
     );
   };
 
   return (
-    <View className="flex-1 bg-slate-50">
-      <View className="px-6 pt-6 pb-4 bg-slate-50">
+    <View className="flex-1 bg-background">
+      <View className="px-6 pt-6 pb-4 bg-background">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center space-x-3">
-            <View className="w-8 h-8 bg-slate-900 rounded-xl items-center justify-center rotate-6 shadow-md shadow-slate-300">
-              <Text className="text-white text-base font-black italic">A</Text>
+            <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
+              <Text className="text-surface text-base font-black italic">A</Text>
             </View>
-            <Text className="text-2xl font-black text-slate-900 tracking-tighter">Architect</Text>
+            <Text className="text-2xl font-black text-text-main tracking-tighter">Architect</Text>
           </View>
           
           <TouchableOpacity 
@@ -215,17 +215,17 @@ export const ArchitectZone = () => {
               else { setEditingRoutine({ name: '', mode: RoutineMode.ASYNC, duration: 12, workout_mappings: [] }); setRoutineModalVisible(true); }
             }}
             activeOpacity={0.8}
-            className="bg-blue-600 px-5 py-3 rounded-2xl shadow-lg shadow-blue-200"
+            className="bg-primary px-5 py-3 rounded-2xl shadow-lg shadow-primary/20"
           >
-            <Text className="text-white font-black text-xs uppercase tracking-widest">+ New</Text>
+            <Text className="text-surface font-black text-xs uppercase tracking-widest">+ New</Text>
           </TouchableOpacity>
         </View>
 
         <View className="flex-row mt-6 space-x-6">
           {['routines', 'days', 'exercises'].map((tab) => (
             <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab as any)} className="relative pb-2">
-              <Text className={`text-[10px] font-black uppercase tracking-[2px] ${activeSubTab === tab ? 'text-blue-600' : 'text-slate-400'}`}>{tab}</Text>
-              {activeSubTab === tab && <View className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] ${activeSubTab === tab ? 'text-primary' : 'text-text-muted'}`}>{tab}</Text>
+              {activeSubTab === tab && <View className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-full" />}
             </TouchableOpacity>
           ))}
         </View>
@@ -235,11 +235,11 @@ export const ArchitectZone = () => {
         data={(activeSubTab === 'exercises' ? exercises : activeSubTab === 'days' ? days : routines) as any[]}
         contentContainerStyle={{ padding: 16 }}
         renderItem={activeSubTab === 'routines' ? renderRoutineItem : ({ item }: any) => (
-          <View className="bg-white p-6 mb-4 rounded-[32px] shadow-sm flex-row justify-between items-center border border-slate-100">
+          <View className="bg-surface p-6 mb-4 rounded-[32px] shadow-sm flex-row justify-between items-center border border-border">
             <View className="flex-1 mr-4">
-              <Text className="text-lg font-black text-slate-900 mb-1 tracking-tight">{item.name}</Text>
-              <View className="bg-slate-50 self-start px-2 py-1 rounded-lg border border-slate-100">
-                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{activeSubTab === 'exercises' ? item.muscle_group : 'Workout Blueprint'}</Text>
+              <Text className="text-lg font-black text-text-main mb-1 tracking-tight">{item.name}</Text>
+              <View className="bg-background self-start px-2 py-1 rounded-lg border border-border">
+                <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">{activeSubTab === 'exercises' ? item.muscle_group : 'Workout Blueprint'}</Text>
               </View>
             </View>
             <TouchableOpacity onPress={async () => {
@@ -249,7 +249,7 @@ export const ArchitectZone = () => {
                 setEditingDay({ id: item.id, name: item.name, exercises: (exResult.rows?._array || []).map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
                 setDayModalVisible(true);
               }
-            }} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shadow-sm"><Text className="text-slate-600 font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+            }} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
           </View>
         )}
         keyExtractor={(item) => item.id}
@@ -259,31 +259,31 @@ export const ArchitectZone = () => {
       {/* Exercise Detail Modal */}
       <Modal visible={exerciseModalVisible} animationType="fade" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 justify-end bg-slate-900/60">
-            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
-              <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
-              <Text className="text-2xl font-black text-slate-900 mb-6">Exercise Detail</Text>
+          <View className="flex-1 justify-end bg-text-main/60">
+            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+              <View className="w-12 h-1.5 bg-background rounded-full self-center mb-6" />
+              <Text className="text-2xl font-black text-text-main mb-6">Exercise Detail</Text>
               <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
-                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="Exercise Name" value={editingExercise?.name} onChangeText={(t) => setEditingExercise({ ...editingExercise!, name: t })} />
-                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Vault Description</Text>
-                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 h-32 text-slate-900 font-medium" multiline placeholder="..." value={editingExercise?.description} onChangeText={(t) => setEditingExercise({ ...editingExercise!, description: t })} />
-                <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Muscle Group</Text>
+                <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Identity</Text>
+                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" placeholder="Exercise Name" placeholderTextColor="var(--color-text-muted)" value={editingExercise?.name} onChangeText={(t) => setEditingExercise({ ...editingExercise!, name: t })} />
+                <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Vault Description</Text>
+                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 h-32 text-text-main font-medium" multiline placeholder="..." placeholderTextColor="var(--color-text-muted)" value={editingExercise?.description} onChangeText={(t) => setEditingExercise({ ...editingExercise!, description: t })} />
+                <Text className="text-xs font-black text-text-muted mb-3 uppercase tracking-widest px-1">Muscle Group</Text>
                 <View className="flex-row flex-wrap mb-6">
                   {Object.values(MuscleGroup).map(mg => (
-                    <TouchableOpacity key={mg} onPress={() => setEditingExercise({ ...editingExercise!, muscle_group: mg })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.muscle_group === mg ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-[10px] font-bold ${editingExercise?.muscle_group === mg ? 'text-white' : 'text-slate-500'}`}>{mg}</Text></TouchableOpacity>
+                    <TouchableOpacity key={mg} onPress={() => setEditingExercise({ ...editingExercise!, muscle_group: mg })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.muscle_group === mg ? 'bg-primary border-primary' : 'bg-surface border-border'}`}><Text className={`text-[10px] font-bold ${editingExercise?.muscle_group === mg ? 'text-surface' : 'text-text-muted'}`}>{mg}</Text></TouchableOpacity>
                   ))}
                 </View>
-                <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Exercise Type</Text>
+                <Text className="text-xs font-black text-text-muted mb-3 uppercase tracking-widest px-1">Exercise Type</Text>
                 <View className="flex-row flex-wrap mb-6">
                   {Object.values(ExerciseType).map(et => (
-                    <TouchableOpacity key={et} onPress={() => setEditingExercise({ ...editingExercise!, type: et })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.type === et ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-[10px] font-bold ${editingExercise?.type === et ? 'text-white' : 'text-slate-500'}`}>{et.replace('_', ' ')}</Text></TouchableOpacity>
+                    <TouchableOpacity key={et} onPress={() => setEditingExercise({ ...editingExercise!, type: et })} className={`px-3 py-1.5 m-1 rounded-lg border ${editingExercise?.type === et ? 'bg-primary border-primary' : 'bg-surface border-border'}`}><Text className={`text-[10px] font-bold ${editingExercise?.type === et ? 'text-surface' : 'text-text-muted'}`}>{et.replace('_', ' ')}</Text></TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
               <View className="flex-row justify-between items-center mt-4">
-                <TouchableOpacity onPress={() => setExerciseModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Cancel</Text></TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveExercise} className="flex-[2] bg-slate-900 py-5 rounded-2xl"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Change</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setExerciseModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-text-muted font-black text-center text-sm uppercase tracking-widest">Cancel</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveExercise} className="flex-[2] bg-primary py-5 rounded-2xl"><Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Commit Change</Text></TouchableOpacity>
               </View>
             </View>
           </View>
@@ -293,37 +293,37 @@ export const ArchitectZone = () => {
       {/* Day Architect Modal */}
       <Modal visible={dayModalVisible} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 justify-end bg-slate-900/60">
-            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
-              <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
-              <Text className="text-2xl font-black text-slate-900 mb-6">Day Architect</Text>
+          <View className="flex-1 justify-end bg-text-main/60">
+            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+              <View className="w-12 h-1.5 bg-background rounded-full self-center mb-6" />
+              <Text className="text-2xl font-black text-text-main mb-6">Day Architect</Text>
               <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Label</Text>
-                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Push Day" value={editingDay?.name} onChangeText={(t) => setEditingDay({ ...editingDay!, name: t })} />
-                <View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Exercises</Text>
+                <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Label</Text>
+                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" placeholder="e.g. Push Day" placeholderTextColor="var(--color-text-muted)" value={editingDay?.name} onChangeText={(t) => setEditingDay({ ...editingDay!, name: t })} />
+                <View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-text-muted uppercase tracking-widest">Exercises</Text>
                   <TouchableOpacity onPress={() => openExercisePicker((id, name) => {
                     setEditingDay(prev => prev ? { ...prev, exercises: [...prev.exercises, { id: Math.random().toString(36).substring(2, 9), exercise_id: id, name, target_sets: 3, target_reps: 10 }] } : null);
-                  })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
+                  })} className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"><Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
                 </View>
                 {editingDay?.exercises.map((ex, idx) => (
-                  <View key={idx} className="bg-slate-50 rounded-3xl p-5 mb-3 border border-slate-100">
-                    <View className="flex-row justify-between items-center mb-4"><Text className="text-sm font-black text-slate-900 flex-1">{ex.name}</Text>
-                      <TouchableOpacity onPress={() => { const newExs = [...editingDay.exercises]; newExs.splice(idx, 1); setEditingDay({ ...editingDay, exercises: newExs }); }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
+                  <View key={idx} className="bg-background rounded-3xl p-5 mb-3 border border-border">
+                    <View className="flex-row justify-between items-center mb-4"><Text className="text-sm font-black text-text-main flex-1">{ex.name}</Text>
+                      <TouchableOpacity onPress={() => { const newExs = [...editingDay.exercises]; newExs.splice(idx, 1); setEditingDay({ ...editingDay, exercises: newExs }); }}><Text className="text-accent font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
                     </View>
                     <View className="flex-row space-x-2">
-                      <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Sets</Text>
-                        <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                      <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Sets</Text>
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
                       </View>
-                      <View className="flex-1"><Text className="text-[10px] font-black text-slate-400 uppercase mb-1">Reps</Text>
-                        <TextInput className="bg-white border border-slate-200 rounded-xl p-3 text-center font-bold" keyboardType="numeric" value={ex.target_reps.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                      <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Reps</Text>
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_reps.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
                       </View>
                     </View>
                   </View>
                 ))}
               </ScrollView>
-              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
-                <TouchableOpacity onPress={() => setDayModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveDay} className="flex-[2] bg-slate-900 py-5 rounded-2xl"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Day</Text></TouchableOpacity>
+              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-border">
+                <TouchableOpacity onPress={() => setDayModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-text-muted font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveDay} className="flex-[2] bg-primary py-5 rounded-2xl"><Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Commit Day</Text></TouchableOpacity>
               </View>
               {renderPickerOverlay()}
             </View>
@@ -334,30 +334,31 @@ export const ArchitectZone = () => {
       {/* Routine Blueprint Modal */}
       <Modal visible={routineModalVisible} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 justify-end bg-slate-900/60">
-            <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
-              <View className="w-12 h-1.5 bg-slate-100 rounded-full self-center mb-6" />
-              <Text className="text-2xl font-black text-slate-900 mb-6">Routine Blueprint</Text>
+          <View className="flex-1 justify-end bg-text-main/60">
+            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+              <View className="w-12 h-1.5 bg-background rounded-full self-center mb-6" />
+              <Text className="text-2xl font-black text-text-main mb-6">Routine Blueprint</Text>
               <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Identity</Text>
-                <TextInput className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" placeholder="e.g. Hypertrophy Plan" value={editingRoutine?.name} onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, name: t })} />
-                <Text className="text-xs font-black text-slate-400 mb-2 uppercase tracking-widest px-1">Duration (Cycles)</Text>
+                <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Identity</Text>
+                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" placeholder="e.g. Hypertrophy Plan" placeholderTextColor="var(--color-text-muted)" value={editingRoutine?.name} onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, name: t })} />
+                <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Duration (Cycles)</Text>
                 <TextInput 
-                  className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-slate-900 font-bold" 
+                  className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" 
                   placeholder="e.g. 12" 
+                  placeholderTextColor="var(--color-text-muted)"
                   keyboardType="numeric"
                   value={editingRoutine?.duration?.toString()} 
                   onChangeText={(t) => setEditingRoutine({ ...editingRoutine!, duration: parseInt(t) || 0 })} 
                 />
-                <Text className="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest px-1">Logic Mode</Text>
+                <Text className="text-xs font-black text-text-muted mb-3 uppercase tracking-widest px-1">Logic Mode</Text>
                 <View className="flex-row mb-6">
                   {Object.values(RoutineMode).map((m) => (
-                    <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-white' : 'text-slate-400'}`}>{m}</Text></TouchableOpacity>
+                    <TouchableOpacity key={m} onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [] })} className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-primary border-primary' : 'bg-surface border-border'}`}><Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-surface' : 'text-text-muted'}`}>{m}</Text></TouchableOpacity>
                   ))}
                 </View>
                 {editingRoutine?.mode === RoutineMode.WEEKLY ? (
                   <View>{WEEK_DAYS.map((dayName, idx) => (
-                    <View key={dayName} className="flex-row justify-between items-center mb-3 bg-slate-50 p-4 rounded-2xl border border-slate-100"><Text className="text-sm font-black text-slate-900">{dayName}</Text>
+                    <View key={dayName} className="flex-row justify-between items-center mb-3 bg-background p-4 rounded-2xl border border-border"><Text className="text-sm font-black text-text-main">{dayName}</Text>
                       <TouchableOpacity onPress={() => openDayPicker((id) => {
                         setEditingRoutine(prev => {
                           if (!prev) return null;
@@ -365,20 +366,20 @@ export const ArchitectZone = () => {
                           newMaps[idx] = id;
                           return { ...prev, workout_mappings: newMaps };
                         });
-                      })} className="bg-white px-4 py-2 rounded-xl border border-slate-200"><Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text></TouchableOpacity>
+                      })} className="bg-surface px-4 py-2 rounded-xl border border-border"><Text className="text-[10px] font-black text-primary uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text></TouchableOpacity>
                     </View>
                   ))}</View>
                 ) : (
-                  <View><View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-slate-400 uppercase tracking-widest">Queue Sequence</Text>
+                  <View><View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-text-muted uppercase tracking-widest">Queue Sequence</Text>
                     <TouchableOpacity onPress={() => openDayPicker((id) => {
                       setEditingRoutine(prev => {
                         if (!prev) return null;
                         return { ...prev, workout_mappings: [...prev.workout_mappings, id] };
                       });
-                    })} className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100"><Text className="text-blue-600 text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
+                    })} className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"><Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
                   </View>
                   {editingRoutine?.workout_mappings.map((wId, idx) => (
-                    <View key={idx} className="flex-row justify-between items-center mb-2 bg-slate-50 p-4 rounded-2xl"><Text className="text-sm font-black text-slate-900">{idx + 1}. {days.find(d => d.id === wId)?.name || 'Workout Day'}</Text>
+                    <View key={idx} className="flex-row justify-between items-center mb-2 bg-background p-4 rounded-2xl"><Text className="text-sm font-black text-text-main">{idx + 1}. {days.find(d => d.id === wId)?.name || 'Workout Day'}</Text>
                       <TouchableOpacity onPress={() => {
                         setEditingRoutine(prev => {
                           if (!prev) return null;
@@ -386,14 +387,14 @@ export const ArchitectZone = () => {
                           newMaps.splice(idx, 1);
                           return { ...prev, workout_mappings: newMaps };
                         });
-                      }}><Text className="text-rose-500 font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
+                      }}><Text className="text-accent font-black text-[10px] uppercase">Remove</Text></TouchableOpacity>
                     </View>
                   ))}</View>
                 )}
               </ScrollView>
-              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-slate-50">
-                <TouchableOpacity onPress={() => setRoutineModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-slate-400 font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveRoutine} className="flex-[2] bg-slate-900 py-5 rounded-2xl shadow-xl shadow-slate-200"><Text className="text-white font-black text-center text-sm uppercase tracking-widest">Commit Blueprint</Text></TouchableOpacity>
+              <View className="flex-row justify-between items-center mt-6 pt-4 border-t border-border">
+                <TouchableOpacity onPress={() => setRoutineModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-text-muted font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveRoutine} className="flex-[2] bg-primary py-5 rounded-2xl shadow-xl shadow-primary/20"><Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Commit Blueprint</Text></TouchableOpacity>
               </View>
               {renderPickerOverlay()}
             </View>
@@ -402,4 +403,4 @@ export const ArchitectZone = () => {
       </Modal>
     </View>
   );
-};
+}

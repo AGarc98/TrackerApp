@@ -7,7 +7,26 @@ module.exports = {
   ],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: "var(--color-background)",
+        surface: "var(--color-surface)",
+        primary: {
+          DEFAULT: "var(--color-primary)",
+          soft: "var(--color-primary-soft)",
+        },
+        accent: {
+          DEFAULT: "var(--color-accent)",
+          soft: "var(--color-accent-soft)",
+        },
+        text: {
+          main: "var(--color-text-main)",
+          muted: "var(--color-text-muted)",
+        },
+        border: "var(--color-border)",
+        success: "var(--color-success)",
+      }
+    },
   },
   plugins: [],
 }

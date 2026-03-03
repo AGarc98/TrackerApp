@@ -25,17 +25,17 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
   });
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-background">
       <View className="p-6 pt-10">
-        <Text className="text-2xl font-black text-slate-900 mb-2">Swap Exercise</Text>
-        <Text className="text-slate-400 font-medium mb-6">Select an alternative to replace this movement.</Text>
+        <Text className="text-2xl font-black text-text-main mb-2">Swap Exercise</Text>
+        <Text className="text-text-muted font-medium mb-6">Select an alternative to replace this movement.</Text>
 
         <TextInput
-          className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 font-bold text-slate-900"
+          className="bg-surface border border-border rounded-2xl p-4 mb-6 font-bold text-text-main"
           placeholder="Search movements or muscle groups..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor="var(--color-text-muted)"
         />
 
         <FlatList
@@ -46,16 +46,16 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
             <TouchableOpacity
               onPress={() => onSelect(item)}
               activeOpacity={0.7}
-              className="bg-white p-6 mb-4 rounded-[32px] border border-slate-100 shadow-sm"
+              className="bg-surface p-6 mb-4 rounded-[32px] border border-border shadow-sm"
             >
               <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-xl font-black text-slate-900 flex-1 mr-2">{item.name}</Text>
-                <View className="bg-blue-50 px-2 py-1 rounded-lg">
-                  <Text className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{item.muscle_group}</Text>
+                <Text className="text-xl font-black text-text-main flex-1 mr-2">{item.name}</Text>
+                <View className="bg-primary-soft px-2 py-1 rounded-lg">
+                  <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{item.muscle_group}</Text>
                 </View>
               </View>
               {item.description && (
-                <Text className="text-slate-400 text-xs font-medium leading-4" numberOfLines={2}>
+                <Text className="text-text-muted text-xs font-medium leading-4" numberOfLines={2}>
                   {item.description}
                 </Text>
               )}
@@ -63,7 +63,7 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
           )}
           ListEmptyComponent={
             <View className="py-20 items-center">
-              <Text className="text-slate-400 font-bold uppercase tracking-widest text-xs">No movements found</Text>
+              <Text className="text-text-muted font-bold uppercase tracking-widest text-xs">No movements found</Text>
             </View>
           }
         />

@@ -60,7 +60,7 @@ export const seedDatabase = async () => {
     if (settingsCount === 0) {
       console.log('Initializing user settings...');
       query(
-        'INSERT INTO User_Settings (id, unit_system, rest_timer_enabled, rest_timer_sound, calendar_sync_enabled, last_modified) VALUES (1, "KG", 1, 1, 0, ?);',
+        'INSERT INTO User_Settings (id, unit_system, theme, rest_timer_enabled, rest_timer_sound, calendar_sync_enabled, last_modified) VALUES (1, "KG", "base", 1, 1, 0, ?);',
         [Date.now()]
       );
     }

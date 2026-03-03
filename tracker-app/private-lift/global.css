@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background: #F5F3FF; /* Light purple background */
+    --color-surface: #FFFFFF;
+    --color-primary: #8B5CF6; /* Purple-500 */
+    --color-primary-soft: #EDE9FE; /* Purple-100 */
+    --color-accent: #D97706; /* Amber-600 (Gold) */
+    --color-accent-soft: #FEF3C7; /* Amber-100 */
+    --color-text-main: #1E1B4B; /* Indigo-950 */
+    --color-text-muted: #6B7280; /* Gray-500 */
+    --color-border: #DDD6FE; /* Purple-200 */
+    --color-success: #10B981;
+  }
+
+  .theme-light {
+    --color-background: #F8FAFC; /* Slate-50 */
+    --color-surface: #FFFFFF;
+    --color-primary: #334155; /* Slate-700 */
+    --color-primary-soft: #F1F5F9; /* Slate-100 */
+    --color-accent: #3B82F6; /* Blue-600 */
+    --color-accent-soft: #EFF6FF; /* Blue-50 */
+    --color-text-main: #0F172A; /* Slate-900 */
+    --color-text-muted: #64748B; /* Slate-500 */
+    --color-border: #E2E8F0; /* Slate-200 */
+    --color-success: #22C55E;
+  }
+
+  .theme-dark {
+    --color-background: #020617; /* Slate-950 */
+    --color-surface: #0F172A; /* Slate-900 */
+    --color-primary: #F8FAFC; /* Slate-50 */
+    --color-primary-soft: #1E293B; /* Slate-800 */
+    --color-accent: #64748B; /* Slate-500 */
+    --color-accent-soft: #334155; /* Slate-700 */
+    --color-text-main: #F1F5F9; /* Slate-100 */
+    --color-text-muted: #94A3B8; /* Slate-400 */
+    --color-border: #1E293B; /* Slate-800 */
+    --color-success: #4ADE80;
+  }
+}

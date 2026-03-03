@@ -25,28 +25,28 @@ const ExerciseItem = memo(({
   onSwap: (exerciseId: string) => void,
   unit: string
 }) => (
-  <View className="bg-white rounded-[40px] p-8 mb-6 shadow-sm border border-slate-100">
+  <View className="bg-surface rounded-[40px] p-8 mb-6 shadow-sm border border-border">
     <View className="flex-row justify-between items-start mb-8">
       <View className="flex-1 mr-4">
-        <Text className="text-2xl font-black text-slate-900 leading-tight mb-2 tracking-tighter">{exercise?.name || 'Unknown Movement'}</Text>
-        <View className="bg-slate-50 self-start px-2 py-1 rounded-lg border border-slate-100">
-          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{exercise?.muscle_group || 'General'}</Text>
+        <Text className="text-2xl font-black text-text-main leading-tight mb-2 tracking-tighter">{exercise?.name || 'Unknown Movement'}</Text>
+        <View className="bg-background self-start px-2 py-1 rounded-lg border border-border">
+          <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">{exercise?.muscle_group || 'General'}</Text>
         </View>
       </View>
       <TouchableOpacity
         onPress={() => onSwap(exerciseId)}
-        className="bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100"
+        className="bg-background px-4 py-3 rounded-2xl border border-border"
       >
-        <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Swap</Text>
+        <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap</Text>
       </TouchableOpacity>
     </View>
     
     {sets.map((set, index) => (
       <View key={set.id} className="flex-row items-center mb-4">
         <View className={`w-12 h-12 rounded-[20px] justify-center items-center mr-4 shadow-sm ${
-          set.is_completed ? 'bg-green-500' : 'bg-slate-50 border border-slate-100'
+          set.is_completed ? 'bg-success' : 'bg-background border border-border'
         }`}>
-          <Text className={`font-black text-base ${set.is_completed ? 'text-white' : 'text-slate-300'}`}>
+          <Text className={`font-black text-base ${set.is_completed ? 'text-surface' : 'text-text-muted/30'}`}>
             {index + 1}
           </Text>
         </View>
@@ -54,8 +54,9 @@ const ExerciseItem = memo(({
         <View className="flex-1 flex-row space-x-3">
           <View className="flex-1">
             <TextInput
-              className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-center font-black text-slate-900 text-lg"
+              className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
               placeholder={unit}
+              placeholderTextColor="var(--color-text-muted)"
               keyboardType="numeric"
               value={set.weight?.toString()}
               onChangeText={(v) => onUpdateSet(exerciseId, index, { weight: parseFloat(v) || undefined })}
@@ -64,8 +65,9 @@ const ExerciseItem = memo(({
           
           <View className="flex-1">
             <TextInput
-              className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-center font-black text-slate-900 text-lg"
+              className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
               placeholder="REPS"
+              placeholderTextColor="var(--color-text-muted)"
               keyboardType="numeric"
               value={set.reps?.toString()}
               onChangeText={(v) => onUpdateSet(exerciseId, index, { reps: parseInt(v) || undefined })}
@@ -77,10 +79,10 @@ const ExerciseItem = memo(({
           onPress={() => onUpdateSet(exerciseId, index, { is_completed: !set.is_completed })}
           activeOpacity={0.7}
           className={`w-14 h-14 rounded-2xl justify-center items-center ml-4 shadow-md ${
-            set.is_completed ? 'bg-green-600 shadow-green-200' : 'bg-white border border-slate-200'
+            set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
           }`}
         >
-          <Text className="text-white text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
+          <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
         </TouchableOpacity>
       </View>
     ))}
@@ -231,27 +233,27 @@ export const AthleteZone = () => {
   }, []);
 
   const Header = ({ showActivePill }: { showActivePill?: boolean }) => (
-    <View className="px-6 pt-6 pb-4 bg-slate-50">
+    <View className="px-6 pt-6 pb-4 bg-background">
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center space-x-3">
-          <View className="w-8 h-8 bg-blue-600 rounded-xl items-center justify-center rotate-6 shadow-md shadow-blue-200">
-            <Text className="text-white text-base font-black italic">L</Text>
+          <View className="w-8 h-8 bg-primary rounded-xl items-center justify-center rotate-6 shadow-md shadow-primary/20">
+            <Text className="text-surface text-base font-black italic">L</Text>
           </View>
-          <Text className="text-2xl font-black text-slate-900 tracking-tighter">Private Lift</Text>
+          <Text className="text-2xl font-black text-text-main tracking-tighter">Private Lift</Text>
         </View>
         
         <View className="flex-row items-center space-x-3">
           {showActivePill && (
-            <View className="bg-green-100 px-3 py-1.5 rounded-full border border-green-200">
-              <Text className="text-green-700 text-[10px] font-black uppercase tracking-widest">Training</Text>
+            <View className="bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
+              <Text className="text-success text-[10px] font-black uppercase tracking-widest">Training</Text>
             </View>
           )}
           <TouchableOpacity 
             onPress={() => setSettingsVisible(true)}
             activeOpacity={0.7}
-            className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100"
+            className="bg-surface p-3 rounded-2xl shadow-sm border border-border"
           >
-            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Vault</Text>
+            <Text className="text-[10px] font-black text-text-muted uppercase tracking-[2px]">Vault</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -260,36 +262,36 @@ export const AthleteZone = () => {
 
   if (!activeSession || (!hasCheckedResume && Platform.OS !== 'web')) {
     return (
-      <View className="flex-1 bg-slate-50">
+      <View className="flex-1 bg-background">
         <Header />
         <ScrollView 
           contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="bg-white p-10 rounded-[50px] shadow-2xl shadow-slate-200 items-center border border-slate-100 w-full mb-8">
-            <Text className="text-3xl font-black text-slate-900 mb-2 tracking-tighter text-center">Athlete Zone</Text>
-            <Text className="text-slate-400 font-medium text-center mb-10 leading-5">
+          <View className="bg-surface p-10 rounded-[50px] shadow-2xl shadow-text-main/5 items-center border border-border w-full mb-8">
+            <Text className="text-3xl font-black text-text-main mb-2 tracking-tighter text-center">Athlete Zone</Text>
+            <Text className="text-text-muted font-medium text-center mb-10 leading-5">
               Vault initialized. Prepared to execute next performance directive.
             </Text>
             
             {activeRoutine ? (
-              <View className="items-center mb-10 bg-slate-50/50 w-full py-8 rounded-[40px] border border-slate-50">
-                <Text className="text-blue-600 font-black uppercase tracking-widest text-[10px] mb-2">Primary Blueprint</Text>
-                <Text className="text-slate-900 font-black text-2xl mb-1">{activeRoutine.name}</Text>
-                <Text className="text-slate-400 font-bold text-xs uppercase tracking-widest">Sequence: {activeRoutine.cycle_count} Cycles Complete</Text>
+              <View className="items-center mb-10 bg-background/50 w-full py-8 rounded-[40px] border border-border">
+                <Text className="text-primary font-black uppercase tracking-widest text-[10px] mb-2">Primary Blueprint</Text>
+                <Text className="text-text-main font-black text-2xl mb-1">{activeRoutine.name}</Text>
+                <Text className="text-text-muted font-bold text-xs uppercase tracking-widest">Sequence: {activeRoutine.cycle_count} Cycles Complete</Text>
                 
                 <View className="flex-row space-x-3 mt-8">
                   <TouchableOpacity 
                     onPress={() => setRoutineSelectorVisible(true)}
-                    className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm"
+                    className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
                   >
-                    <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adjust Plan</Text>
+                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Adjust Plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     onPress={() => setWorkoutSelectorVisible(true)}
-                    className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm"
+                    className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
                   >
-                    <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Swap Next</Text>
+                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap Next</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -297,21 +299,21 @@ export const AthleteZone = () => {
               <View className="items-center mb-10">
                 <TouchableOpacity 
                   onPress={() => setRoutineSelectorVisible(true)}
-                  className="bg-blue-600 px-10 py-5 rounded-[28px] shadow-xl shadow-blue-200"
+                  className="bg-primary px-10 py-5 rounded-[28px] shadow-xl shadow-primary/20"
                 >
-                  <Text className="text-white font-black uppercase tracking-[3px] text-xs text-center">Load Training Blueprint</Text>
+                  <Text className="text-surface font-black uppercase tracking-[3px] text-xs text-center">Load Training Blueprint</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {isRestDaySuggested && (
-              <View className="bg-amber-50 p-5 rounded-[32px] border border-amber-100 mb-8 w-full flex-row items-center">
-                <View className="w-10 h-10 bg-amber-100 rounded-2xl items-center justify-center mr-4">
+              <View className="bg-accent-soft p-5 rounded-[32px] border border-accent/20 mb-8 w-full flex-row items-center">
+                <View className="w-10 h-10 bg-accent/10 rounded-2xl items-center justify-center mr-4">
                   <Text className="text-lg">🔋</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-amber-800 font-black uppercase tracking-widest text-[10px] mb-0.5">Recovery Protocol</Text>
-                  <Text className="text-amber-900 font-bold text-xs">Rest day suggested before next cycle.</Text>
+                  <Text className="text-accent font-black uppercase tracking-widest text-[10px] mb-0.5">Recovery Protocol</Text>
+                  <Text className="text-text-main font-bold text-xs">Rest day suggested before next cycle.</Text>
                 </View>
               </View>
             )}
@@ -319,9 +321,9 @@ export const AthleteZone = () => {
             <TouchableOpacity
               onPress={handleStartDefault}
               activeOpacity={0.8}
-              className="bg-slate-900 w-full py-6 rounded-[32px] shadow-2xl shadow-slate-300"
+              className="bg-text-main w-full py-6 rounded-[32px] shadow-2xl shadow-text-main/20"
             >
-              <Text className="text-white text-lg font-black text-center uppercase tracking-[4px]">
+              <Text className="text-background text-lg font-black text-center uppercase tracking-[4px]">
                 {activeRoutine ? 'Initiate Session' : 'Quick Start'}
               </Text>
             </TouchableOpacity>
@@ -331,10 +333,10 @@ export const AthleteZone = () => {
         </ScrollView>
 
         <Modal visible={settingsVisible} animationType="slide" presentationStyle="pageSheet">
-          <View className="flex-1 bg-slate-50 pt-4">
+          <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
-              <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
-                <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Close Vault</Text>
+              <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
               </TouchableOpacity>
             </View>
             <SettingsZone />
@@ -342,10 +344,10 @@ export const AthleteZone = () => {
         </Modal>
 
         <Modal visible={routineSelectorVisible} animationType="slide" presentationStyle="pageSheet">
-          <View className="flex-1 bg-slate-50 pt-4">
+          <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
-              <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
-                <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Cancel</Text>
+              <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
               </TouchableOpacity>
             </View>
             <RoutineSelector onClose={() => setRoutineSelectorVisible(false)} />
@@ -353,10 +355,10 @@ export const AthleteZone = () => {
         </Modal>
 
         <Modal visible={workoutSelectorVisible} animationType="slide" presentationStyle="pageSheet">
-          <View className="flex-1 bg-slate-50 pt-4">
+          <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
-              <TouchableOpacity onPress={() => setWorkoutSelectorVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
-                <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Cancel</Text>
+              <TouchableOpacity onPress={() => setWorkoutSelectorVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
               </TouchableOpacity>
             </View>
             {activeRoutineId && (
@@ -376,7 +378,7 @@ export const AthleteZone = () => {
   }
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-background">
       <Header showActivePill />
 
       <KeyboardAvoidingView 
@@ -384,7 +386,7 @@ export const AthleteZone = () => {
         className="flex-1"
       >
         <ScrollView className="flex-1 p-4 pt-4" showsVerticalScrollIndicator={false}>
-          <Text className="text-xs font-black text-slate-400 uppercase tracking-[4px] ml-4 mb-4">Training Directive</Text>
+          <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-4 mb-4">Training Directive</Text>
           {Object.entries(draftSets).map(([exerciseId, sets]) => (
             <ExerciseItem 
               key={exerciseId}
@@ -405,36 +407,36 @@ export const AthleteZone = () => {
         <TouchableOpacity 
           onPress={stopTimer}
           activeOpacity={0.9}
-          className="absolute bottom-40 self-center bg-blue-600 px-10 py-5 rounded-full shadow-2xl shadow-blue-300 flex-row items-center space-x-4 border-4 border-white"
+          className="absolute bottom-40 self-center bg-primary px-10 py-5 rounded-full shadow-2xl shadow-primary/30 flex-row items-center space-x-4 border-4 border-surface"
         >
-          <View className="w-2.5 h-2.5 bg-white rounded-full" style={{ opacity: 0.8 }} />
-          <Text className="text-white font-black text-xl tabular-nums tracking-widest">REST: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>
-          <Text className="text-blue-200 font-black text-[10px] uppercase tracking-widest ml-4">Dismiss</Text>
+          <View className="w-2.5 h-2.5 bg-surface rounded-full" style={{ opacity: 0.8 }} />
+          <Text className="text-surface font-black text-xl tabular-nums tracking-widest">REST: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>
+          <Text className="text-surface/60 font-black text-[10px] uppercase tracking-widest ml-4">Dismiss</Text>
         </TouchableOpacity>
       )}
 
-      <View className="px-8 py-8 bg-white/80 border-t border-slate-100 flex-row space-x-5 backdrop-blur-md">
+      <View className="px-8 py-8 bg-surface/80 border-t border-border flex-row space-x-5 backdrop-blur-md">
         <TouchableOpacity
           onPress={discardWorkout}
           activeOpacity={0.7}
-          className="flex-1 bg-slate-50 py-6 rounded-[28px] items-center border border-slate-100"
+          className="flex-1 bg-background py-6 rounded-[28px] items-center border border-border"
         >
-          <Text className="text-slate-400 font-black uppercase tracking-[2px] text-xs">Discard</Text>
+          <Text className="text-text-muted font-black uppercase tracking-[2px] text-xs">Discard</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={finishWorkout}
           activeOpacity={0.8}
-          className="flex-[2] bg-slate-900 py-6 rounded-[28px] items-center shadow-2xl shadow-slate-400"
+          className="flex-[2] bg-text-main py-6 rounded-[28px] items-center shadow-2xl shadow-text-main/20"
         >
-          <Text className="text-white font-black uppercase tracking-[4px] text-xs">Commit Session</Text>
+          <Text className="text-background font-black uppercase tracking-[4px] text-xs">Commit Session</Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={settingsVisible} animationType="slide" presentationStyle="pageSheet">
-        <View className="flex-1 bg-slate-50 pt-4">
+        <View className="flex-1 bg-background pt-4">
           <View className="flex-row justify-end px-6">
-            <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-slate-200/50 px-4 py-2 rounded-full">
-              <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Close Vault</Text>
+            <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+              <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
             </TouchableOpacity>
           </View>
           <SettingsZone />
@@ -442,16 +444,16 @@ export const AthleteZone = () => {
       </Modal>
 
       <Modal visible={exerciseSelectorVisible} animationType="slide" presentationStyle="pageSheet">
-        <View className="flex-1 bg-slate-50 pt-4">
+        <View className="flex-1 bg-background pt-4">
           <View className="flex-row justify-end px-6">
             <TouchableOpacity 
               onPress={() => {
                 setExerciseSelectorVisible(false);
                 setExerciseToSwap(null);
               }} 
-              className="bg-slate-200/50 px-4 py-2 rounded-full"
+              className="bg-background border border-border px-4 py-2 rounded-full"
             >
-              <Text className="text-xs font-black text-slate-500 uppercase tracking-widest">Cancel</Text>
+              <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
             </TouchableOpacity>
           </View>
           <ExerciseSelector 

@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS User_Settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   active_routine_id TEXT,
   unit_system TEXT DEFAULT 'KG', -- KG or LBS
+  theme TEXT DEFAULT 'base', -- light, base, dark
   rest_timer_enabled INTEGER DEFAULT 1, -- Boolean
   rest_timer_sound INTEGER DEFAULT 1, -- Boolean
   default_rest_duration INTEGER DEFAULT 60, -- Seconds

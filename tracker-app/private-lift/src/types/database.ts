@@ -109,6 +109,7 @@ export interface UserSettings {
   id: number;
   active_routine_id: string | null;
   unit_system: 'KG' | 'LBS';
+  theme: 'light' | 'base' | 'dark';
   rest_timer_enabled: boolean;
   rest_timer_sound: boolean;
   default_rest_duration: number;
