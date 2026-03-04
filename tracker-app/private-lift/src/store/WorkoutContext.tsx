@@ -87,7 +87,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       setActiveRoutineId(routineId);
-      setSettings(prev => prev ? { ...prev, active_routine_id: routineId } : null);
+      setSettings(prev => prev ? { ...prev, active_routine_id: routineId, last_modified: lastModified } : null);
     } catch (error) {
       console.error('Failed to set active routine:', error);
     }
@@ -98,12 +98,16 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const lastModified = Date.now();
       const updates = { ...newSettings, last_modified: lastModified };
       
-      Object.entries(updates).forEach(([key, value]) => {
-        if (key === 'id') return;
-        const dbValue = typeof value === 'boolean' ? (value ? 1 : 0) : value;
-        query(`UPDATE User_Settings SET ${key} = ? WHERE id = 1;`, [dbValue]);
+      const keys = Object.keys(updates).filter(k => k !== 'id');
+      if (keys.length === 0) return;
+
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      const params = keys.map(k => {
+        const value = (updates as any)[k];
+        return typeof value === 'boolean' ? (value ? 1 : 0) : value;
       });
 
+      query(`UPDATE User_Settings SET ${setClause} WHERE id = 1;`, params);
       setSettings(prev => prev ? { ...prev, ...updates } : null);
     } catch (error) {
       console.error('Failed to update settings:', error);

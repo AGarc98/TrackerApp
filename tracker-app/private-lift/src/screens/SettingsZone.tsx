@@ -12,7 +12,7 @@ export const SettingsZone = () => {
 
   useEffect(() => {
     loadRoutine();
-  }, [activeRoutineId]);
+  }, [activeRoutineId, contextSettings?.last_modified]);
 
   const loadRoutine = async () => {
     try {
@@ -30,6 +30,11 @@ export const SettingsZone = () => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Download', onPress: () => Alert.alert('Success', 'Data exported to PrivateLift/Backups/') }
     ]);
+  };
+
+  const wrapUpdate = async (update: Partial<UserSettings>) => {
+    console.log('Requesting settings update:', update);
+    await updateSettings(update);
   };
 
   if (!contextSettings) return null;
@@ -80,7 +85,7 @@ export const SettingsZone = () => {
               {(['base', 'light', 'dark'] as const).map((t) => (
                 <TouchableOpacity 
                   key={t}
-                  onPress={() => updateSettings({ theme: t })} 
+                  onPress={() => wrapUpdate({ theme: t })} 
                   className={`flex-1 py-3 rounded-xl items-center ${contextSettings.theme === t ? 'bg-surface shadow-sm border border-border' : ''}`}
                 >
                   <Text className={`text-[10px] font-black uppercase tracking-widest ${contextSettings.theme === t ? 'text-primary' : 'text-text-muted'}`}>
@@ -94,17 +99,17 @@ export const SettingsZone = () => {
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-text-main">Unit System</Text><Text className="text-xs text-text-muted">Weight standard</Text></View>
             <View className="flex-row bg-background p-1 rounded-xl">
-              <TouchableOpacity onPress={() => updateSettings({ unit_system: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => updateSettings({ unit_system: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ unit_system: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ unit_system: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
             </View>
           </View>
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-text-main">Rest Timer</Text><Text className="text-xs text-text-muted">Auto-countdown</Text></View>
-            <Switch value={contextSettings.rest_timer_enabled} onValueChange={(v) => updateSettings({ rest_timer_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
+            <Switch value={contextSettings.rest_timer_enabled} onValueChange={(v) => wrapUpdate({ rest_timer_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
           </View>
           <View className="flex-row justify-between items-center">
             <View><Text className="text-base font-bold text-text-main">Calendar Sync</Text><Text className="text-xs text-text-muted">Log to system</Text></View>
-            <Switch value={contextSettings.calendar_sync_enabled} onValueChange={(v) => updateSettings({ calendar_sync_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
+            <Switch value={contextSettings.calendar_sync_enabled} onValueChange={(v) => wrapUpdate({ calendar_sync_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />
           </View>
         </View>
 

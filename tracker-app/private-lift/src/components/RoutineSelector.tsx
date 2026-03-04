@@ -50,7 +50,7 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-background">
-        <ActivityIndicator size="large" color="var(--color-primary)" />
+        <ActivityIndicator size="large" color="#8B5CF6" />
       </View>
     );
   }
