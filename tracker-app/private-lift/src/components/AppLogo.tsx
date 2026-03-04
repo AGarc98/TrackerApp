@@ -1,84 +1,84 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
+import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withRepeat, 
+  withTiming, 
+  withSequence,
+  Easing
+} from 'react-native-reanimated';
 
 interface AppLogoProps {
   size?: number;
   color?: string;
   className?: string;
+  animated?: boolean;
 }
 
 /**
- * Minimalist Logo: Lock + Dumbbell Hybrid
- * Bottom half: Rounded lock body
- * Top half: Dumbbell shackle
+ * Minimalist Logo: Lock + Dumbbell Hybrid (SVG Version)
+ * Bottom: Lock body with keyhole
+ * Top: Dumbbell-inspired shackle
  */
-export const AppLogo: React.FC<AppLogoProps> = ({ size = 32, color = 'var(--color-primary)', className = '' }) => {
-  const bodySize = size * 0.6;
-  const shackleWidth = size * 0.7;
-  const shackleHeight = size * 0.4;
-  const plateWidth = size * 0.15;
-  const barHeight = size * 0.08;
+export const AppLogo: React.FC<AppLogoProps> = ({ 
+  size = 32, 
+  color = '#3b82f6', 
+  className = '',
+  animated = false 
+}) => {
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (animated) {
+      opacity.value = withRepeat(
+        withSequence(
+          withTiming(0.4, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1, // Infinite
+        true // Reverse
+      );
+    } else {
+      opacity.value = 1;
+    }
+  }, [animated]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: 0.95 + (opacity.value * 0.05) }]
+  }));
 
   return (
-    <View 
-      style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }} 
-      className={className}
-    >
-      {/* Dumbbell Shackle (Top) */}
-      <View style={{ width: shackleWidth, height: shackleHeight, alignItems: 'center', marginBottom: -size * 0.05 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* Left Plate */}
-          <View 
-            style={{ 
-              width: plateWidth, 
-              height: shackleHeight, 
-              backgroundColor: color, 
-              borderRadius: plateWidth / 2 
-            }} 
-          />
-          {/* Handle / Bar */}
-          <View 
-            style={{ 
-              width: shackleWidth - (plateWidth * 2), 
-              height: barHeight, 
-              backgroundColor: color 
-            }} 
-          />
-          {/* Right Plate */}
-          <View 
-            style={{ 
-              width: plateWidth, 
-              height: shackleHeight, 
-              backgroundColor: color, 
-              borderRadius: plateWidth / 2 
-            }} 
-          />
-        </View>
-      </View>
-
-      {/* Lock Body (Bottom) */}
-      <View 
-        style={{ 
-          width: bodySize, 
-          height: bodySize, 
-          backgroundColor: color, 
-          borderRadius: size * 0.15,
-          borderBottomLeftRadius: size * 0.25,
-          borderBottomRightRadius: size * 0.25,
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}
+    <Animated.View style={animated ? animatedStyle : {}} className={className}>
+      <Svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 100 100" 
+        fill="none"
       >
-        {/* Minimal Keyhole */}
-        <View 
-          style={{ 
-            width: size * 0.1, 
-            height: size * 0.2, 
-            backgroundColor: 'rgba(255,255,255,0.3)', 
-            borderRadius: size * 0.05 
-          }} 
+        {/* Dumbbell Shackle (Top) */}
+        <Path 
+          d="M25 20 H75 M25 10 V30 M75 10 V30" 
+          stroke={color} 
+          strokeWidth="10" 
+          strokeLinecap="round" 
         />
-      </View>
-    </View>
+        
+        {/* Lock Body (Bottom) */}
+        <Rect 
+          x="20" 
+          y="45" 
+          width="60" 
+          height="45" 
+          rx="12" 
+          fill={color} 
+        />
+        
+        {/* Keyhole (Minimalist) */}
+        <Circle cx="50" cy="62" r="4" fill="white" fillOpacity="0.5" />
+        <Rect x="48" y="62" width="4" height="10" rx="2" fill="white" fillOpacity="0.5" />
+      </Svg>
+    </Animated.View>
   );
 };
