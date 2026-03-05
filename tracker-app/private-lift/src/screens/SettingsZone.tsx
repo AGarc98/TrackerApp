@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Modal } from 'react-native';
-import { query } from '../database/db';
+import { DB } from '../database/db';
 import { UserSettings, Routine } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
 import { RoutineSelector } from '../components/RoutineSelector';
@@ -17,8 +17,8 @@ export const SettingsZone = () => {
   const loadRoutine = async () => {
     try {
       if (activeRoutineId) {
-        const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
-        setActiveRoutine(rResult.rows?._array[0] as Routine || null);
+        const routine = DB.getOne<Routine>('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
+        setActiveRoutine(routine);
       } else {
         setActiveRoutine(null);
       }
@@ -97,12 +97,21 @@ export const SettingsZone = () => {
           </View>
 
           <View className="flex-row justify-between items-center mb-6">
-            <View><Text className="text-base font-bold text-text-main">Unit System</Text><Text className="text-xs text-text-muted">Weight standard</Text></View>
+            <View><Text className="text-base font-bold text-text-main">Weight Unit</Text><Text className="text-xs text-text-muted">Load standard</Text></View>
             <View className="flex-row bg-background p-1 rounded-xl">
-              <TouchableOpacity onPress={() => wrapUpdate({ unit_system: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => wrapUpdate({ unit_system: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.unit_system === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.unit_system === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
             </View>
           </View>
+
+          <View className="flex-row justify-between items-center mb-6">
+            <View><Text className="text-base font-bold text-text-main">Distance Unit</Text><Text className="text-xs text-text-muted">Movement standard</Text></View>
+            <View className="flex-row bg-background p-1 rounded-xl">
+              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'KM' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'KM' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'KM' ? 'text-primary' : 'text-text-muted'}`}>KM</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'MILES' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'MILES' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'MILES' ? 'text-primary' : 'text-text-muted'}`}>MI</Text></TouchableOpacity>
+            </View>
+          </View>
+
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-text-main">Rest Timer</Text><Text className="text-xs text-text-muted">Auto-countdown</Text></View>
             <Switch value={contextSettings.rest_timer_enabled} onValueChange={(v) => wrapUpdate({ rest_timer_enabled: v })} trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }} />

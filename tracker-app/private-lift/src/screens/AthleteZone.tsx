@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { useWorkout } from '../store/WorkoutContext';
-import { query } from '../database/db';
-import { Exercise, Workout, SetData, Routine, RoutineMode } from '../types/database';
+import { DB } from '../database/db';
+import { Exercise, Workout, SetData, Routine, RoutineMode, MuscleGroup, ExerciseWithMuscle } from '../types/database';
 import { SettingsZone } from './SettingsZone';
 import { RoutineSelector } from '../components/RoutineSelector';
 import { BiometricsLogger } from '../components/BiometricsLogger';
@@ -19,7 +19,7 @@ const ExerciseItem = memo(({
   unit 
 }: { 
   exerciseId: string, 
-  exercise?: Exercise, 
+  exercise?: ExerciseWithMuscle, 
   sets: SetData[], 
   onUpdateSet: (exerciseId: string, index: number, updates: Partial<SetData>) => void,
   onSwap: (exerciseId: string) => void,
@@ -92,7 +92,7 @@ const ExerciseItem = memo(({
 export const AthleteZone = () => {
   const { activeSession, activeRoutineId, draftSets, logSet, startWorkout, finishWorkout, discardWorkout, swapExercise, settings, resumeWorkout } = useWorkout();
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<ExerciseWithMuscle[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [routineSelectorVisible, setRoutineSelectorVisible] = useState(false);
@@ -122,22 +122,23 @@ export const AthleteZone = () => {
   }, [activeSession, hasCheckedResume]);
 
   const loadInitialData = async () => {
-    const wResult = query('SELECT * FROM Workouts;') as any;
-    setAvailableWorkouts(wResult.rows?._array || []);
+    const availableWorkouts = DB.getAll<Workout>('SELECT * FROM Workouts;');
+    setAvailableWorkouts(availableWorkouts);
     
-    const eResult = query('SELECT * FROM Exercises;')as any;
-    setExercises(eResult.rows?._array || []);
+    const allExercises = DB.getAll<ExerciseWithMuscle>(`
+      SELECT e.*, emg.muscle_group 
+      FROM Exercises e 
+      LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1;
+    `);
+    setExercises(allExercises);
 
     if (activeRoutineId) {
-      const rResult = query('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]) as any;
-      const routine = rResult.rows?._array[0] || null;
+      const routine = DB.getOne<Routine>('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
       setActiveRoutine(routine);
 
       if (routine) {
-        const countRes = query('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [routine.id]) as any;
-        const total = countRes.rows?._array[0]?.count || 0;
-        const loggedRes = query('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [routine.id]) as any;
-        const completed = loggedRes.rows?._array[0]?.count || 0;
+        const total = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [routine.id])?.count || 0;
+        const completed = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [routine.id])?.count || 0;
         setRoutineProgress({ completed, total });
       }
     } else {
@@ -153,30 +154,28 @@ export const AthleteZone = () => {
 
   const handleStartDefault = async () => {
     let targetWorkout: Workout | null = null;
-    let workoutExercises: { exercise: Exercise; target_sets: number; target_reps: number }[] = [];
+    let workoutExercises: { exercise: ExerciseWithMuscle; target_sets: number; target_reps: number | null }[] = [];
 
     if (activeRoutineId) {
-      const mappingsResult = query('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutineId]) as any;
-      const mappings = mappingsResult.rows?._array || [];
+      const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutineId]);
       
       if (mappings.length > 0) {
         const nextIndex = routineProgress.completed % mappings.length;
         const nextMapping = mappings[nextIndex];
-        const workoutResult = query('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]) as any;
-        targetWorkout = workoutResult.rows?._array[0] || null;
+        targetWorkout = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]);
 
         if (targetWorkout) {
-          const exResult = query('SELECT we.*, e.name, e.description, e.type, e.muscle_group, e.is_base_content, e.last_modified FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]) as any;
-          workoutExercises = (exResult.rows?._array || []).map((we: any) => ({
+          const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+          workoutExercises = exResult.map((we: any) => ({
             exercise: {
               id: we.exercise_id,
               name: we.name,
               description: we.description,
               type: we.type,
               muscle_group: we.muscle_group,
-              is_base_content: !!we.is_base_content,
-              last_modified: we.last_modified
-            } as Exercise,
+              last_modified: we.exercise_last_modified,
+              default_rest_duration: we.default_rest_duration || 90
+            } as ExerciseWithMuscle,
             target_sets: we.target_sets,
             target_reps: we.target_reps
           }));
@@ -190,17 +189,17 @@ export const AthleteZone = () => {
         Alert.alert('Vault Empty', 'Architect some workouts and routines first.');
         return;
       }
-      const exResult = query('SELECT we.*, e.name, e.description, e.type, e.muscle_group, e.is_base_content, e.last_modified FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]) as any;
-      workoutExercises = (exResult.rows?._array || []).map((we: any) => ({
+      const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+      workoutExercises = exResult.map((we: any) => ({
         exercise: {
           id: we.exercise_id,
           name: we.name,
           description: we.description,
           type: we.type,
           muscle_group: we.muscle_group,
-          is_base_content: !!we.is_base_content,
-          last_modified: we.last_modified
-        } as Exercise,
+          last_modified: we.exercise_last_modified,
+          default_rest_duration: we.default_rest_duration || 90
+        } as ExerciseWithMuscle,
         target_sets: we.target_sets,
         target_reps: we.target_reps
       }));
@@ -395,7 +394,7 @@ export const AthleteZone = () => {
               sets={sets}
               onUpdateSet={updateSet}
               onSwap={handleSwapTrigger}
-              unit={settings?.unit_system || 'KG'}
+              unit={settings?.weight_unit || 'KG'}
             />
           ))}
           <View className="h-40" />

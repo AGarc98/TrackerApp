@@ -19,81 +19,149 @@ export enum ExerciseType {
   WEIGHTED_BW = 'WEIGHTED_BW',
 }
 
+export enum RoutineMode {
+  WEEKLY = 'WEEKLY',
+  ASYNC = 'ASYNC',
+}
+
+export enum SetType {
+  WARMUP = 'WARMUP',
+  WORKING = 'WORKING',
+  DROPSET = 'DROPSET',
+  FAILURE = 'FAILURE',
+}
+
 export interface Exercise {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   type: ExerciseType;
+  default_rest_duration: number; // Seconds
+  last_modified: number;
+}
+
+export type ExerciseWithMuscle = Exercise & { muscle_group: MuscleGroup };
+
+export interface ExerciseMuscleGroup {
+  id: string;
+  exercise_id: string;
   muscle_group: MuscleGroup;
-  is_base_content: boolean;
-  last_modified: number; // Timestamp
+  is_primary: boolean;
+  last_modified: number;
 }
 
 export interface Workout {
   id: string;
   name: string;
-  last_modified: number; // Timestamp
+  description: string | null;
+  estimated_duration: number | null; // In minutes
+  last_modified: number;
 }
 
 export interface WorkoutExercise {
   id: string;
   workout_id: string;
   exercise_id: string;
+  superset_id: string | null;
   order_index: number;
   target_sets: number;
-  target_reps: number;
-  last_modified: number; // Timestamp
-}
-
-export enum RoutineMode {
-  WEEKLY = 'WEEKLY',
-  ASYNC = 'ASYNC',
+  target_reps: number | null;
+  target_weight: number | null;
+  target_time_ms: number | null;
+  target_distance: number | null;
+  rest_period_override: number | null;
+  last_modified: number;
 }
 
 export interface Routine {
   id: string;
   name: string;
+  description: string | null;
   mode: RoutineMode;
-  duration: number; // weeks/cycles
+  duration: number; // Cycles or weeks
   cycle_count: number;
-  last_modified: number; // Timestamp
+  last_modified: number;
 }
 
 export interface RoutineWorkout {
   id: string;
   routine_id: string;
   workout_id: string;
+  day_of_week: number | null; // 0-6
+  week_number: number | null;
   order_index: number;
-  last_modified: number; // Timestamp
+  last_modified: number;
 }
 
 export interface LoggedSession {
   id: string;
   workout_id: string;
   routine_id: string | null;
-  timestamp: number;
+  start_time: number;
+  end_time: number | null;
+  notes: string | null;
+  rpe: number | null;
   is_swapped: boolean;
-  last_modified: number; // Timestamp
+  last_modified: number;
 }
 
 export interface LoggedSet {
   id: string;
   session_id: string;
   exercise_id: string;
-  weight: number;
-  reps: number;
-  time_ms: number;
+  set_type: SetType;
+  weight: number | null;
+  reps: number | null;
+  time_ms: number | null;
+  distance: number | null;
+  notes: string | null;
   is_skipped: boolean;
-  last_modified: number; // Timestamp
+  order_index: number;
+  last_modified: number;
 }
 
 export interface UserBiometrics {
   id: string;
-  timestamp: number;
-  body_weight: number;
-  body_fat_pct?: number;
-  photo_path?: string;
-  last_modified: number; // Timestamp
+  measured_at: number;
+  body_weight: number | null;
+  body_fat_pct: number | null;
+  notes: string | null;
+  photo_path: string | null;
+  last_modified: number;
+}
+
+export interface ActiveSession {
+  id: string;
+  workout_id: string;
+  routine_id: string | null;
+  start_time: number;
+  current_exercise_id: string | null;
+  current_set_index: number | null;
+  timer_start_time: number | null;
+  is_paused: boolean;
+  is_swapped: boolean;
+  draft_data: string | null; // JSON blob
+  last_modified: number;
+}
+
+export interface UserSettings {
+  id: 1;
+  active_routine_id: string | null;
+  user_name: string | null;
+  weight_unit: 'KG' | 'LBS';
+  distance_unit: 'KM' | 'MILES';
+  theme: 'light' | 'base' | 'dark';
+  rest_timer_enabled: boolean;
+  rest_timer_sound: boolean;
+  rest_timer_vibrate: boolean;
+  auto_start_rest_timer: boolean;
+  keep_screen_on: boolean;
+  default_rest_duration: number;
+  calendar_sync_enabled: boolean;
+  sync_history_limit_months: number;
+  last_sync_timestamp: number | null;
+  vault_connection_token: string | null;
+  last_modified: number;
 }
 
 export interface SetData {
@@ -101,37 +169,8 @@ export interface SetData {
   weight?: number;
   reps?: number;
   time_ms?: number;
-  is_skipped: boolean;
+  distance?: number;
   is_completed: boolean;
-}
-
-export interface UserSettings {
-  id: number;
-  active_routine_id: string | null;
-  unit_system: 'KG' | 'LBS';
-  theme: 'light' | 'base' | 'dark';
-  rest_timer_enabled: boolean;
-  rest_timer_sound: boolean;
-  default_rest_duration: number;
-  calendar_sync_enabled: boolean;
-  sync_history_limit_months: number;
-  last_sync_timestamp: number | null;
-  vault_connection_token: string | null;
-  last_modified: number; // Timestamp
-}
-
-export interface ActiveSession {
-  id: string;
-  workout_id: string;
-  timestamp: number;
-  is_swapped: boolean;
-  draft_data?: string; // JSON blob for crash recovery/volatile swapping state
-  last_modified: number; // Timestamp
-}
-
-export interface DraftSet {
-  id: string;
-  session_id: string;
-  exercise_id: string;
-  input_data: string; // JSON string of SetData[]
+  is_skipped: boolean;
+  notes?: string;
 }

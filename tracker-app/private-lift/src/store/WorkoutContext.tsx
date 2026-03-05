@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import db, { query } from '../database/db';
-import { ActiveSession, SetData, Exercise, Workout, UserSettings } from '../types/database';
+import db, { DB } from '../database/db';
+import { ActiveSession, SetData, Exercise, Workout, UserSettings, SetType } from '../types/database';
 
 interface WorkoutContextType {
   activeSession: ActiveSession | null;
@@ -9,7 +9,7 @@ interface WorkoutContextType {
   draftSets: Record<string, SetData[]>;
   isLoading: boolean;
   settings: UserSettings | null;
-  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number }[], routineId?: string | null) => Promise<void>;
+  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[], routineId?: string | null) => Promise<void>;
   logSet: (exerciseId: string, sets: SetData[]) => Promise<void>;
   swapExercise: (oldExerciseId: string, newExerciseId: string) => Promise<void>;
   finishWorkout: () => Promise<void>;
@@ -36,16 +36,17 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const loadData = useCallback(async () => {
     try {
-      const sessionResult = query('SELECT * FROM Active_Session LIMIT 1;');
-      const session = sessionResult.rows?._array[0] as ActiveSession | undefined;
+      const session = DB.getOne<ActiveSession>('SELECT * FROM Active_Session LIMIT 1;');
 
-      const settingsResult = query('SELECT * FROM User_Settings WHERE id = 1;');
-      const s = settingsResult.rows?._array[0] as any;
+      const s = DB.getOne<any>('SELECT * FROM User_Settings WHERE id = 1;');
       if (s) {
         const formattedSettings: UserSettings = {
           ...s,
           rest_timer_enabled: !!s.rest_timer_enabled,
           rest_timer_sound: !!s.rest_timer_sound,
+          rest_timer_vibrate: !!s.rest_timer_vibrate,
+          auto_start_rest_timer: !!s.auto_start_rest_timer,
+          keep_screen_on: !!s.keep_screen_on,
           calendar_sync_enabled: !!s.calendar_sync_enabled,
         };
         setSettings(formattedSettings);
@@ -53,10 +54,16 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (session) {
-        setActiveSession(session);
-        if (session.draft_data) {
+        // Handle boolean conversion for SQLite
+        const formattedSession: ActiveSession = {
+          ...session,
+          is_paused: !!session.is_paused,
+          is_swapped: !!session.is_swapped
+        };
+        setActiveSession(formattedSession);
+        if (formattedSession.draft_data) {
           try {
-            setDraftSets(JSON.parse(session.draft_data));
+            setDraftSets(JSON.parse(formattedSession.draft_data));
           } catch (e) {
             console.error('Failed to parse draft_data:', e);
             setDraftSets({});
@@ -80,14 +87,17 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const setActiveRoutine = async (routineId: string | null, duration?: number) => {
     try {
       const lastModified = Date.now();
-      query('UPDATE User_Settings SET active_routine_id = ?, last_modified = ? WHERE id = 1;', [routineId, lastModified]);
+      DB.run('UPDATE User_Settings SET active_routine_id = ?, last_modified = ? WHERE id = 1;', [routineId, lastModified]);
       
       if (routineId && duration !== undefined) {
-        query('UPDATE Routines SET duration = ?, last_modified = ? WHERE id = ?;', [duration, lastModified, routineId]);
+        DB.run('UPDATE Routines SET duration = ?, last_modified = ? WHERE id = ?;', [duration, lastModified, routineId]);
       }
 
       setActiveRoutineId(routineId);
-      setSettings(prev => prev ? { ...prev, active_routine_id: routineId, last_modified: lastModified } : null);
+      setSettings(prev => {
+        if (!prev) return null;
+        return { ...prev, active_routine_id: routineId, last_modified: lastModified };
+      });
     } catch (error) {
       console.error('Failed to set active routine:', error);
     }
@@ -107,18 +117,22 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return typeof value === 'boolean' ? (value ? 1 : 0) : value;
       });
 
-      query(`UPDATE User_Settings SET ${setClause} WHERE id = 1;`, params);
-      setSettings(prev => prev ? { ...prev, ...updates } : null);
+      DB.run(`UPDATE User_Settings SET ${setClause} WHERE id = 1;`, params);
+      
+      setSettings(prev => {
+        if (!prev) return null;
+        return { ...prev, ...updates };
+      });
     } catch (error) {
       console.error('Failed to update settings:', error);
     }
   };
 
-  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number }[], routineId: string | null = null) => {
+  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[], routineId: string | null = null) => {
     try {
       const sessionId = generateId();
-      const timestamp = Date.now();
-      const lastModified = timestamp;
+      const startTime = Date.now();
+      const lastModified = startTime;
 
       const initialDrafts: Record<string, SetData[]> = {};
       exercises.forEach(ex => {
@@ -126,21 +140,33 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           id: generateId().substring(0, 8),
           is_skipped: false,
           is_completed: false,
-          reps: ex.target_reps
+          reps: ex.target_reps || undefined
         }));
       });
 
       const draftData = JSON.stringify(initialDrafts);
 
-      db.withTransactionSync(() => {
-        db.runSync('DELETE FROM Active_Session;');
+      DB.transaction(() => {
+        DB.run('DELETE FROM Active_Session;');
 
-        db.runSync(
-          'INSERT INTO Active_Session (id, workout_id, routine_id, timestamp, is_swapped, draft_data, last_modified) VALUES (?, ?, ?, ?, 0, ?, ?);',
-          [sessionId, workout.id, routineId, timestamp, draftData, lastModified]
+        DB.run(
+          'INSERT INTO Active_Session (id, workout_id, routine_id, start_time, is_paused, is_swapped, draft_data, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+          [sessionId, workout.id, routineId, startTime, 0, 0, draftData, lastModified]
         );
 
-        setActiveSession({ id: sessionId, workout_id: workout.id, routine_id: routineId, timestamp, is_swapped: false, draft_data: draftData, last_modified: lastModified });
+        setActiveSession({ 
+          id: sessionId, 
+          workout_id: workout.id, 
+          routine_id: routineId, 
+          start_time: startTime, 
+          is_paused: false,
+          is_swapped: false, 
+          draft_data: draftData, 
+          last_modified: lastModified,
+          current_exercise_id: null,
+          current_set_index: null,
+          timer_start_time: null
+        });
         setDraftSets(initialDrafts);
       });
     } catch (error) {
@@ -156,7 +182,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const draftData = JSON.stringify(newDraftSets);
       const lastModified = Date.now();
 
-      query(
+      DB.run(
         'UPDATE Active_Session SET draft_data = ?, last_modified = ? WHERE id = ?;',
         [draftData, lastModified, activeSession.id]
       );
@@ -174,7 +200,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const oldSets = draftSets[oldExerciseId] || [];
       const newSets: SetData[] = oldSets.map(s => ({
         ...s,
-        id: generateId().substring(0, 8), // New IDs for swapped movement sets
+        id: generateId().substring(0, 8), 
         is_completed: false,
       }));
 
@@ -183,8 +209,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       newDraftSets[newExerciseId] = newSets;
       const draftData = JSON.stringify(newDraftSets);
 
-      db.withTransactionSync(() => {
-        db.runSync(
+      DB.transaction(() => {
+        DB.run(
           'UPDATE Active_Session SET draft_data = ?, is_swapped = 1, last_modified = ? WHERE id = ?;',
           [draftData, lastModified, activeSession.id]
         );
@@ -201,26 +227,29 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!activeSession) return;
 
     try {
-      const lastModified = Date.now();
-      db.withTransactionSync(() => {
-        db.runSync(
-          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, timestamp, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?);',
-          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.timestamp, activeSession.is_swapped ? 1 : 0, lastModified]
+      const endTime = Date.now();
+      const lastModified = endTime;
+      DB.transaction(() => {
+        DB.run(
+          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
+          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, activeSession.is_swapped ? 1 : 0, lastModified]
         );
 
         Object.entries(draftSets).forEach(([exerciseId, sets]) => {
-          sets.forEach(set => {
+          sets.forEach((set, index) => {
             if (set.is_completed || set.is_skipped) {
-              db.runSync(
-                'INSERT INTO Logged_Sets (id, session_id, exercise_id, weight, reps, time_ms, is_skipped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+              DB.run(
+                'INSERT INTO Logged_Sets (id, session_id, exercise_id, set_type, weight, reps, time_ms, is_skipped, order_index, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
                 [
                   generateId(),
                   activeSession.id,
                   exerciseId,
+                  SetType.WORKING, // Default to working
                   set.weight || null,
                   set.reps || null,
                   set.time_ms || null,
                   set.is_skipped ? 1 : 0,
+                  index,
                   lastModified
                 ]
               );
@@ -228,23 +257,16 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         });
 
-        // PROGRESS TRACKING LOGIC
         if (activeSession.routine_id) {
-          // Count how many workouts in the routine
-          const countRes = db.getAllSync('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [activeSession.routine_id]);
-          const routineWorkoutCount = (countRes[0] as any)?.count || 1;
+          const routineWorkoutCount = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [activeSession.routine_id])?.count || 1;
+          const sessionsLogged = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [activeSession.routine_id])?.count || 0;
 
-          // Count how many logged sessions for this routine
-          const loggedRes = db.getAllSync('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [activeSession.routine_id]);
-          const sessionsLogged = (loggedRes[0] as any)?.count || 0;
-
-          // If we just finished the last workout of a cycle, increment cycle_count
           if (sessionsLogged > 0 && sessionsLogged % routineWorkoutCount === 0) {
-            db.runSync('UPDATE Routines SET cycle_count = cycle_count + 1, last_modified = ? WHERE id = ?;', [lastModified, activeSession.routine_id]);
+            DB.run('UPDATE Routines SET cycle_count = cycle_count + 1, last_modified = ? WHERE id = ?;', [lastModified, activeSession.routine_id]);
           }
         }
 
-        db.runSync('DELETE FROM Active_Session WHERE id = ?;', [activeSession.id]);
+        DB.run('DELETE FROM Active_Session WHERE id = ?;', [activeSession.id]);
 
         setActiveSession(null);
         setDraftSets({});
@@ -265,8 +287,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         style: 'destructive',
         onPress: () => {
           try {
-            db.withTransactionSync(() => {
-              db.runSync('DELETE FROM Active_Session WHERE id = ?;', [activeSession.id]);
+            DB.transaction(() => {
+              DB.run('DELETE FROM Active_Session WHERE id = ?;', [activeSession.id]);
               setActiveSession(null);
               setDraftSets({});
             });

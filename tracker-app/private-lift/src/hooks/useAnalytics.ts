@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { query } from '../database/db';
+import { DB } from '../database/db';
 import { MuscleGroup } from '../types/database';
 
 export interface AnalyticsDataPoint {
@@ -53,16 +53,16 @@ export const useAnalytics = (muscleGroup: MuscleGroup, weeks: number = 4) => {
               COUNT(DISTINCT s.id) as frequency,
               AVG(ls.weight) as avg_intensity
             FROM Logged_Sets ls
-            JOIN Exercises e ON ls.exercise_id = e.id
+            JOIN Exercise_Muscle_Groups emg ON ls.exercise_id = emg.exercise_id
             JOIN Logged_Sessions s ON ls.session_id = s.id
-            WHERE e.muscle_group = ?
-              AND s.timestamp >= ?
-              AND s.timestamp < ?
+            WHERE emg.muscle_group = ?
+              AND emg.is_primary = 1
+              AND s.start_time >= ?
+              AND s.start_time < ?
               AND ls.is_skipped = 0
           `;
 
-          const result = query(sql, [muscleGroup, startTime, endTime]);
-          const row = result.rows?._array[0] as any;
+          const row = DB.getOne<any>(sql, [muscleGroup, startTime, endTime]);
 
           const volume = row?.total_volume || 0;
           const frequency = row?.frequency || 0;

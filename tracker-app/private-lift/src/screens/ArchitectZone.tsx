@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import db, { query } from '../database/db';
-import { Exercise, MuscleGroup, ExerciseType, Routine, RoutineMode, Workout, WorkoutExercise } from '../types/database';
+import db, { DB } from '../database/db';
+import { Exercise, MuscleGroup, ExerciseType, Routine, RoutineMode, Workout, WorkoutExercise, ExerciseWithMuscle } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
 
 interface UIDayExercise {
@@ -9,7 +9,7 @@ interface UIDayExercise {
   exercise_id: string;
   name: string;
   target_sets: number;
-  target_reps: number;
+  target_reps: number | null;
 }
 
 interface UIDay {
@@ -23,7 +23,7 @@ const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 export const ArchitectZone = () => {
   const { setActiveRoutine, activeRoutineId } = useWorkout();
   const [activeSubTab, setActiveSubTab] = useState<'routines' | 'days' | 'exercises'>('routines');
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<ExerciseWithMuscle[]>([]);
   const [days, setDays] = useState<Workout[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   
@@ -34,7 +34,7 @@ export const ArchitectZone = () => {
   const [pickerVisible, setPickerVisible] = useState(false);
 
   // Editing state
-  const [editingExercise, setEditingExercise] = useState<Partial<Exercise> | null>(null);
+  const [editingExercise, setEditingExercise] = useState<Partial<ExerciseWithMuscle> | null>(null);
   const [editingDay, setEditingDay] = useState<UIDay | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Partial<Routine> & { workout_mappings: (string | null)[] } | null>(null);
 
@@ -48,14 +48,19 @@ export const ArchitectZone = () => {
 
   const loadData = async () => {
     try {
-      const eResult = query('SELECT * FROM Exercises ORDER BY name ASC;') as any;
-      setExercises(eResult.rows?._array || []);
+      const eResult = DB.getAll<ExerciseWithMuscle>(`
+        SELECT e.*, emg.muscle_group 
+        FROM Exercises e 
+        LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1
+        ORDER BY e.name ASC;
+      `);
+      setExercises(eResult);
 
-      const dResult = query('SELECT * FROM Workouts ORDER BY name ASC;') as any;
-      setDays(dResult.rows?._array || []);
+      const dResult = DB.getAll<Workout>('SELECT * FROM Workouts ORDER BY name ASC;');
+      setDays(dResult);
 
-      const rResult = query('SELECT * FROM Routines ORDER BY name ASC;') as any;
-      setRoutines(rResult.rows?._array || []);
+      const rResult = DB.getAll<Routine>('SELECT * FROM Routines ORDER BY name ASC;');
+      setRoutines(rResult);
     } catch (e) {
       console.error('Failed to load Architect data:', e);
     }
@@ -65,13 +70,24 @@ export const ArchitectZone = () => {
     if (!editingExercise?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const lastModified = Date.now();
-      if (editingExercise.id) {
-        query('UPDATE Exercises SET name = ?, description = ?, muscle_group = ?, type = ?, last_modified = ? WHERE id = ?;',
-          [editingExercise.name, editingExercise.description || '', editingExercise.muscle_group || MuscleGroup.CHEST, editingExercise.type || ExerciseType.STRENGTH, lastModified, editingExercise.id]);
-      } else {
-        query('INSERT INTO Exercises (id, name, description, type, muscle_group, is_base_content, last_modified) VALUES (?, ?, ?, ?, ?, 0, ?);',
-          [Math.random().toString(36).substring(2, 15), editingExercise.name, editingExercise.description || '', editingExercise.type || ExerciseType.STRENGTH, editingExercise.muscle_group || MuscleGroup.CHEST, lastModified]);
-      }
+      const exerciseId = editingExercise.id || Math.random().toString(36).substring(2, 15);
+      
+      DB.transaction(() => {
+        if (editingExercise.id) {
+          DB.run('UPDATE Exercises SET name = ?, description = ?, type = ?, last_modified = ? WHERE id = ?;',
+            [editingExercise.name, editingExercise.description || null, editingExercise.type || ExerciseType.STRENGTH, lastModified, editingExercise.id]);
+          // Re-sync muscle groups (simplified for now: delete and re-insert primary)
+          DB.run('DELETE FROM Exercise_Muscle_Groups WHERE exercise_id = ?;', [editingExercise.id]);
+        } else {
+          DB.run('INSERT INTO Exercises (id, name, description, type, last_modified) VALUES (?, ?, ?, ?, ?);',
+            [exerciseId, editingExercise.name, editingExercise.description || null, editingExercise.type || ExerciseType.STRENGTH, lastModified]);
+        }
+        
+        // Always insert the selected muscle group as primary
+        DB.run('INSERT INTO Exercise_Muscle_Groups (id, exercise_id, muscle_group, is_primary, last_modified) VALUES (?, ?, ?, 1, ?);',
+          [Math.random().toString(36).substring(2, 15), exerciseId, editingExercise.muscle_group || MuscleGroup.CHEST, lastModified]);
+      });
+
       setExerciseModalVisible(false);
       loadData();
     } catch (e) { console.error(e); }
@@ -82,15 +98,15 @@ export const ArchitectZone = () => {
     try {
       const dayId = editingDay.id || Math.random().toString(36).substring(2, 15);
       const lastModified = Date.now();
-      db.withTransactionSync(() => {
+      DB.transaction(() => {
         if (editingDay.id) {
-          db.runSync('UPDATE Workouts SET name = ?, last_modified = ? WHERE id = ?;', [editingDay.name, lastModified, editingDay.id]);
-          db.runSync('DELETE FROM Workout_Exercises WHERE workout_id = ?;', [editingDay.id]);
+          DB.run('UPDATE Workouts SET name = ?, last_modified = ? WHERE id = ?;', [editingDay.name, lastModified, editingDay.id]);
+          DB.run('DELETE FROM Workout_Exercises WHERE workout_id = ?;', [editingDay.id]);
         } else {
-          db.runSync('INSERT INTO Workouts (id, name, last_modified) VALUES (?, ?, ?);', [dayId, editingDay.name, lastModified]);
+          DB.run('INSERT INTO Workouts (id, name, last_modified) VALUES (?, ?, ?);', [dayId, editingDay.name, lastModified]);
         }
         editingDay.exercises.forEach((ex, idx) => {
-          db.runSync('INSERT INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
+          DB.run('INSERT INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
             [Math.random().toString(36).substring(2, 15), dayId, ex.exercise_id, idx, ex.target_sets, ex.target_reps, lastModified]);
         });
       });
@@ -104,15 +120,18 @@ export const ArchitectZone = () => {
     try {
       const rId = editingRoutine.id || Math.random().toString(36).substring(2, 15);
       const lastModified = Date.now();
-      db.withTransactionSync(() => {
+      DB.transaction(() => {
         if (editingRoutine.id) {
-          db.runSync('UPDATE Routines SET name = ?, mode = ?, duration = ?, last_modified = ? WHERE id = ?;', [editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified, editingRoutine.id]);
-          db.runSync('DELETE FROM Routine_Workouts WHERE routine_id = ?;', [editingRoutine.id]);
+          DB.run('UPDATE Routines SET name = ?, mode = ?, duration = ?, last_modified = ? WHERE id = ?;', [editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified, editingRoutine.id]);
+          DB.run('DELETE FROM Routine_Workouts WHERE routine_id = ?;', [editingRoutine.id]);
         } else {
-          db.runSync('INSERT INTO Routines (id, name, mode, duration, cycle_count, last_modified) VALUES (?, ?, ?, ?, 0, ?);', [rId, editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified]);
+          DB.run('INSERT INTO Routines (id, name, mode, duration, cycle_count, last_modified) VALUES (?, ?, ?, ?, 0, ?);', [rId, editingRoutine.name!, editingRoutine.mode!, editingRoutine.duration!, lastModified]);
         }
         editingRoutine.workout_mappings.forEach((wId, idx) => {
-          if (wId) db.runSync('INSERT INTO Routine_Workouts (id, routine_id, workout_id, order_index, last_modified) VALUES (?, ?, ?, ?, ?);', [Math.random().toString(36).substring(2, 15), rId, wId, idx, lastModified]);
+          if (wId) {
+            DB.run('INSERT INTO Routine_Workouts (id, routine_id, workout_id, order_index, last_modified) VALUES (?, ?, ?, ?, ?);', 
+              [Math.random().toString(36).substring(2, 15), rId, wId, idx, lastModified]);
+          }
         });
       });
       setRoutineModalVisible(false);
@@ -121,16 +140,21 @@ export const ArchitectZone = () => {
   };
 
   const openExercisePicker = (callback: (id: string, name: string) => void) => {
-    const res = query('SELECT * FROM Exercises ORDER BY name ASC;') as any;
-    setExercises(res.rows?._array || []);
+    const res = DB.getAll<ExerciseWithMuscle>(`
+      SELECT e.*, emg.muscle_group 
+      FROM Exercises e 
+      LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1
+      ORDER BY e.name ASC;
+    `);
+    setExercises(res);
     setPickerType('exercise');
     setCurrentPickerCallback(() => callback);
     setPickerVisible(true);
   };
 
   const openDayPicker = (callback: (id: string, name: string) => void) => {
-    const res = query('SELECT * FROM Workouts ORDER BY name ASC;') as any;
-    setDays(res.rows?._array || []);
+    const res = DB.getAll<Workout>('SELECT * FROM Workouts ORDER BY name ASC;');
+    setDays(res);
     setPickerType('day');
     setCurrentPickerCallback(() => callback);
     setPickerVisible(true);
@@ -142,7 +166,7 @@ export const ArchitectZone = () => {
       <View className="absolute inset-0 bg-text-main/80 justify-center p-6 z-[1000] rounded-t-[40px]">
         <View className="bg-surface rounded-[40px] p-6 max-h-[80%] shadow-2xl">
           <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-text-muted">Select {pickerType}</Text>
-          <FlatList
+          <FlatList<ExerciseWithMuscle | Workout>
             data={pickerType === 'exercise' ? exercises : days}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
@@ -179,8 +203,7 @@ export const ArchitectZone = () => {
           </View>
           <View className="flex-row">
             <TouchableOpacity onPress={async () => {
-              const mappingsResult = query('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [item.id]);
-              const mappings = (mappingsResult.rows?._array || []);
+              const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [item.id]);
               let workout_mappings: (string | null)[] = item.mode === RoutineMode.WEEKLY ? Array(7).fill(null) : mappings.map((m: any) => m.workout_id);
               if (item.mode === RoutineMode.WEEKLY) mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
               setEditingRoutine({ ...item, workout_mappings });
@@ -245,8 +268,8 @@ export const ArchitectZone = () => {
             <TouchableOpacity onPress={async () => {
               if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
               else if (activeSubTab === 'days') {
-                const exResult = query('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]) as any;
-                setEditingDay({ id: item.id, name: item.name, exercises: (exResult.rows?._array || []).map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
+                const exResult = DB.getAll<any>('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
+                setEditingDay({ id: item.id, name: item.name, exercises: exResult.map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
                 setDayModalVisible(true);
               }
             }} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
@@ -267,7 +290,7 @@ export const ArchitectZone = () => {
                 <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Identity</Text>
                 <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" placeholder="Exercise Name" placeholderTextColor="var(--color-text-muted)" value={editingExercise?.name} onChangeText={(t) => setEditingExercise({ ...editingExercise!, name: t })} />
                 <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Vault Description</Text>
-                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 h-32 text-text-main font-medium" multiline placeholder="..." placeholderTextColor="var(--color-text-muted)" value={editingExercise?.description} onChangeText={(t) => setEditingExercise({ ...editingExercise!, description: t })} />
+                <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 h-32 text-text-main font-medium" multiline placeholder="..." placeholderTextColor="var(--color-text-muted)" value={editingExercise?.description || ''} onChangeText={(t) => setEditingExercise({ ...editingExercise!, description: t })} />
                 <Text className="text-xs font-black text-text-muted mb-3 uppercase tracking-widest px-1">Muscle Group</Text>
                 <View className="flex-row flex-wrap mb-6">
                   {Object.values(MuscleGroup).map(mg => (
@@ -315,7 +338,7 @@ export const ArchitectZone = () => {
                         <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
                       </View>
                       <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Reps</Text>
-                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_reps.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_reps?.toString() || ''} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || null; setEditingDay({ ...editingDay, exercises: newExs }); }} />
                       </View>
                     </View>
                   </View>

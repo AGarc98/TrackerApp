@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { query } from '../database/db';
+import { DB } from '../database/db';
 import { Routine, RoutineMode } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
 
@@ -22,8 +22,8 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
 
   const loadRoutines = async () => {
     try {
-      const result = query('SELECT * FROM Routines ORDER BY name ASC;') as any;
-      setRoutines(result.rows?._array || []);
+      const result = DB.getAll<Routine>('SELECT * FROM Routines ORDER BY name ASC;');
+      setRoutines(result);
     } catch (error) {
       console.error('Failed to load routines:', error);
     } finally {

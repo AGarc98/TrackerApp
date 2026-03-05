@@ -33,48 +33,50 @@ function AppContent() {
     );
   }
 
-  const themeClass = settings?.theme === 'light' ? 'theme-light' : settings?.theme === 'dark' ? 'theme-dark' : '';
+  const themeClass = settings?.theme === 'light' ? 'theme-light' : settings?.theme === 'dark' ? 'theme-dark' : 'theme-base';
 
   return (
-    <SafeAreaView className={`flex-1 bg-background ${themeClass}`}>
-      <View className="flex-1">
-        {renderContent()}
-      </View>
-      
-      <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
-        <TouchableOpacity 
-          onPress={() => setActiveTab('data')}
-          className="flex-1 items-center"
-          activeOpacity={0.7}
-        >
-          <View className={`px-4 py-2 rounded-2xl ${activeTab === 'data' ? 'bg-primary-soft' : ''}`}>
-            <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'data' ? 'text-primary' : 'text-text-muted'}`}>
-              Data
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => setActiveTab('athlete')}
-          className="flex-1 items-center"
-          activeOpacity={0.7}
-        >
-          <View className={`px-4 py-2 rounded-2xl ${activeTab === 'athlete' ? 'bg-primary-soft' : ''}`}>
-            <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'athlete' ? 'text-primary' : 'text-text-muted'}`}>
-              Athlete
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => setActiveTab('architect')}
-          className="flex-1 items-center"
-          activeOpacity={0.7}
-        >
-          <View className={`px-4 py-2 rounded-2xl ${activeTab === 'architect' ? 'bg-primary-soft' : ''}`}>
-            <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'architect' ? 'text-primary' : 'text-text-muted'}`}>
-              Architect
-            </Text>
-          </View>
-        </TouchableOpacity>
+    <SafeAreaView className="flex-1 bg-background">
+      <View className={`flex-1 ${themeClass} bg-background`} key={settings?.theme}>
+        <View className="flex-1">
+          {renderContent()}
+        </View>
+        
+        <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
+          <TouchableOpacity 
+            onPress={() => setActiveTab('data')}
+            className="flex-1 items-center"
+            activeOpacity={0.7}
+          >
+            <View className={`px-4 py-2 rounded-2xl ${activeTab === 'data' ? 'bg-primary-soft' : ''}`}>
+              <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'data' ? 'text-primary' : 'text-text-muted'}`}>
+                Data
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setActiveTab('athlete')}
+            className="flex-1 items-center"
+            activeOpacity={0.7}
+          >
+            <View className={`px-4 py-2 rounded-2xl ${activeTab === 'athlete' ? 'bg-primary-soft' : ''}`}>
+              <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'athlete' ? 'text-primary' : 'text-text-muted'}`}>
+                Athlete
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setActiveTab('architect')}
+            className="flex-1 items-center"
+            activeOpacity={0.7}
+          >
+            <View className={`px-4 py-2 rounded-2xl ${activeTab === 'architect' ? 'bg-primary-soft' : ''}`}>
+              <Text className={`font-bold text-[10px] uppercase tracking-widest ${activeTab === 'architect' ? 'text-primary' : 'text-text-muted'}`}>
+                Architect
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <StatusBar style={settings?.theme === 'dark' ? 'light' : 'dark'} />

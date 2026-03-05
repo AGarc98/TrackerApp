@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { query } from '../database/db';
+import { DB } from '../database/db';
 import { Workout, Exercise } from '../types/database';
 
 interface WorkoutSelectorProps {
   routineId: string;
-  onSelect: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number }[]) => void;
+  onSelect: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[]) => void;
   onClose: () => void;
 }
 
@@ -19,14 +19,14 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
 
   const loadWorkouts = async () => {
     try {
-      const result = query(
+      const result = DB.getAll<Workout>(
         `SELECT w.* FROM Workouts w 
          JOIN Routine_Workouts rw ON w.id = rw.workout_id 
          WHERE rw.routine_id = ? 
          ORDER BY rw.order_index ASC;`,
         [routineId]
-      ) as any;
-      setWorkouts(result.rows?._array || []);
+      );
+      setWorkouts(result);
     } catch (error) {
       console.error('Failed to load workouts for routine:', error);
     } finally {
@@ -36,25 +36,25 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
 
   const handleSelect = async (workout: Workout) => {
     try {
-      const exResult = query(
-        `SELECT we.*, e.name, e.description, e.type, e.muscle_group, e.is_base_content, e.last_modified 
+      const exResult = DB.getAll<any>(
+        `SELECT we.*, e.name, e.description, e.type, e.last_modified, emg.muscle_group
          FROM Workout_Exercises we 
          JOIN Exercises e ON we.exercise_id = e.id 
+         LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1
          WHERE we.workout_id = ? 
          ORDER BY we.order_index ASC;`,
         [workout.id]
       );
       
-      const workoutExercises = (exResult.rows?._array || []).map((we: any) => ({
+      const workoutExercises = exResult.map((we: any) => ({
         exercise: {
           id: we.exercise_id,
           name: we.name,
           description: we.description,
           type: we.type,
           muscle_group: we.muscle_group,
-          is_base_content: !!we.is_base_content,
           last_modified: we.last_modified
-        } as Exercise,
+        } as any,
         target_sets: we.target_sets,
         target_reps: we.target_reps
       }));
@@ -68,7 +68,7 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-background">
-        <ActivityIndicator size="large" color="var(--color-primary)" />
+        <ActivityIndicator size="large" color="#8B5CF6" />
       </View>
     );
   }

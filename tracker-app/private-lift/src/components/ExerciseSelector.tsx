@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
-import { Exercise } from '../types/database';
+import { Exercise, MuscleGroup } from '../types/database';
+
+type ExerciseWithMuscle = Exercise & { muscle_group: MuscleGroup };
 
 interface ExerciseSelectorProps {
-  exercises: Exercise[];
-  onSelect: (exercise: Exercise) => void;
+  exercises: ExerciseWithMuscle[];
+  onSelect: (exercise: ExerciseWithMuscle) => void;
   onClose: () => void;
   excludeIds?: string[];
 }
@@ -18,8 +20,8 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredExercises = exercises.filter(ex => {
-    const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         ex.muscle_group.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (ex.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                         (ex.muscle_group?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     const isNotExcluded = !excludeIds.includes(ex.id);
     return matchesSearch && isNotExcluded;
   });
@@ -27,11 +29,11 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
   return (
     <View className="flex-1 bg-background">
       <View className="p-6 pt-10">
-        <Text className="text-2xl font-black text-text-main mb-2">Swap Exercise</Text>
-        <Text className="text-text-muted font-medium mb-6">Select an alternative to replace this movement.</Text>
+        <Text className="text-2xl font-black text-text-main mb-2 tracking-tighter">Swap Exercise</Text>
+        <Text className="text-text-muted font-medium mb-6 leading-5">Select an alternative to replace this movement for the current session.</Text>
 
         <TextInput
-          className="bg-surface border border-border rounded-2xl p-4 mb-6 font-bold text-text-main"
+          className="bg-surface border border-border rounded-2xl p-5 mb-6 font-bold text-text-main text-lg shadow-sm"
           placeholder="Search movements or muscle groups..."
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -48,14 +50,14 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
               activeOpacity={0.7}
               className="bg-surface p-6 mb-4 rounded-[32px] border border-border shadow-sm"
             >
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-xl font-black text-text-main flex-1 mr-2">{item.name}</Text>
-                <View className="bg-primary-soft px-2 py-1 rounded-lg">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-black text-text-main flex-1 mr-4 tracking-tight leading-tight">{item.name}</Text>
+                <View className="bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/10">
                   <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{item.muscle_group}</Text>
                 </View>
               </View>
               {item.description && (
-                <Text className="text-text-muted text-xs font-medium leading-4" numberOfLines={2}>
+                <Text className="text-text-muted text-xs font-medium leading-5" numberOfLines={3}>
                   {item.description}
                 </Text>
               )}
@@ -63,7 +65,10 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
           )}
           ListEmptyComponent={
             <View className="py-20 items-center">
-              <Text className="text-text-muted font-bold uppercase tracking-widest text-xs">No movements found</Text>
+              <View className="w-12 h-12 bg-background rounded-2xl items-center justify-center mb-4 border border-border">
+                <Text className="text-lg">🔍</Text>
+              </View>
+              <Text className="text-text-muted font-black uppercase tracking-widest text-[10px]">No movements found in vault</Text>
             </View>
           }
         />

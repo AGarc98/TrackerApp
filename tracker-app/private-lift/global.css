@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root, .theme-base {
     --color-background: #F5F3FF; /* Light purple background */
     --color-surface: #FFFFFF;
     --color-primary: #8B5CF6; /* Purple-500 */
