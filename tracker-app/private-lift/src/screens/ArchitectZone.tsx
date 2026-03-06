@@ -93,6 +93,16 @@ export const ArchitectZone = () => {
     } catch (e) { console.error(e); }
   };
 
+  const handleDeleteExercise = (id: string) => {
+    Alert.alert('Purge Exercise', 'This will remove the movement from all blueprints. Proceed?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Purge', style: 'destructive', onPress: () => {
+        DB.run('DELETE FROM Exercises WHERE id = ?;', [id]);
+        loadData();
+      }}
+    ]);
+  };
+
   const handleSaveDay = async () => {
     if (!editingDay?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
@@ -113,6 +123,16 @@ export const ArchitectZone = () => {
       setDayModalVisible(false);
       loadData();
     } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteDay = (id: string) => {
+    Alert.alert('Purge Day', 'This blueprint will be erased from all routines. Proceed?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Purge', style: 'destructive', onPress: () => {
+        DB.run('DELETE FROM Workouts WHERE id = ?;', [id]);
+        loadData();
+      }}
+    ]);
   };
 
   const handleSaveRoutine = async () => {
@@ -137,6 +157,17 @@ export const ArchitectZone = () => {
       setRoutineModalVisible(false);
       loadData();
     } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteRoutine = (id: string) => {
+    Alert.alert('Purge Routine', 'This sequence will be removed from the vault. Proceed?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Purge', style: 'destructive', onPress: async () => {
+        if (activeRoutineId === id) await setActiveRoutine(null);
+        DB.run('DELETE FROM Routines WHERE id = ?;', [id]);
+        loadData();
+      }}
+    ]);
   };
 
   const openExercisePicker = (callback: (id: string, name: string) => void) => {
@@ -209,6 +240,7 @@ export const ArchitectZone = () => {
               setEditingRoutine({ ...item, workout_mappings });
               setRoutineModalVisible(true);
             }} className="bg-background p-3 rounded-2xl mr-2"><Text className="text-text-muted font-bold text-xs">Edit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="bg-background p-3 rounded-2xl mr-2"><Text className="text-accent font-bold text-xs">Del</Text></TouchableOpacity>
             <TouchableOpacity onPress={async () => {
               const newId = isActive ? null : item.id;
               await setActiveRoutine(newId);
@@ -265,14 +297,20 @@ export const ArchitectZone = () => {
                 <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">{activeSubTab === 'exercises' ? item.muscle_group : 'Workout Blueprint'}</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={async () => {
-              if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
-              else if (activeSubTab === 'days') {
-                const exResult = DB.getAll<any>('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
-                setEditingDay({ id: item.id, name: item.name, exercises: exResult.map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
-                setDayModalVisible(true);
-              }
-            }} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+            <View className="flex-row">
+                <TouchableOpacity onPress={async () => {
+                if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
+                else if (activeSubTab === 'days') {
+                    const exResult = DB.getAll<any>('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
+                    setEditingDay({ id: item.id, name: item.name, exercises: exResult.map((we: any) => ({ id: we.id, exercise_id: we.exercise_id, name: we.name, target_sets: we.target_sets, target_reps: we.target_reps })) });
+                    setDayModalVisible(true);
+                }
+                }} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                    if (activeSubTab === 'exercises') handleDeleteExercise(item.id);
+                    else if (activeSubTab === 'days') handleDeleteDay(item.id);
+                }} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-accent font-black text-[10px] uppercase tracking-widest">Del</Text></TouchableOpacity>
+            </View>
           </View>
         )}
         keyExtractor={(item) => item.id}

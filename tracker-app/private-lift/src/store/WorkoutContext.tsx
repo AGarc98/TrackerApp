@@ -37,33 +37,18 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadData = useCallback(async () => {
     try {
       const session = DB.getOne<ActiveSession>('SELECT * FROM Active_Session LIMIT 1;');
+      const s = DB.getOne<UserSettings>('SELECT * FROM User_Settings WHERE id = 1;');
 
-      const s = DB.getOne<any>('SELECT * FROM User_Settings WHERE id = 1;');
       if (s) {
-        const formattedSettings: UserSettings = {
-          ...s,
-          rest_timer_enabled: !!s.rest_timer_enabled,
-          rest_timer_sound: !!s.rest_timer_sound,
-          rest_timer_vibrate: !!s.rest_timer_vibrate,
-          auto_start_rest_timer: !!s.auto_start_rest_timer,
-          keep_screen_on: !!s.keep_screen_on,
-          calendar_sync_enabled: !!s.calendar_sync_enabled,
-        };
-        setSettings(formattedSettings);
-        setActiveRoutineId(formattedSettings.active_routine_id);
+        setSettings(s);
+        setActiveRoutineId(s.active_routine_id);
       }
 
       if (session) {
-        // Handle boolean conversion for SQLite
-        const formattedSession: ActiveSession = {
-          ...session,
-          is_paused: !!session.is_paused,
-          is_swapped: !!session.is_swapped
-        };
-        setActiveSession(formattedSession);
-        if (formattedSession.draft_data) {
+        setActiveSession(session);
+        if (session.draft_data) {
           try {
-            setDraftSets(JSON.parse(formattedSession.draft_data));
+            setDraftSets(JSON.parse(session.draft_data));
           } catch (e) {
             console.error('Failed to parse draft_data:', e);
             setDraftSets({});
@@ -94,10 +79,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       setActiveRoutineId(routineId);
-      setSettings(prev => {
-        if (!prev) return null;
-        return { ...prev, active_routine_id: routineId, last_modified: lastModified };
-      });
+      setSettings(prev => prev ? { ...prev, active_routine_id: routineId, last_modified: lastModified } : null);
     } catch (error) {
       console.error('Failed to set active routine:', error);
     }
@@ -112,17 +94,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (keys.length === 0) return;
 
       const setClause = keys.map(k => `${k} = ?`).join(', ');
-      const params = keys.map(k => {
-        const value = (updates as any)[k];
-        return typeof value === 'boolean' ? (value ? 1 : 0) : value;
-      });
+      const params = keys.map(k => (updates as any)[k]);
 
       DB.run(`UPDATE User_Settings SET ${setClause} WHERE id = 1;`, params);
       
-      setSettings(prev => {
-        if (!prev) return null;
-        return { ...prev, ...updates };
-      });
+      setSettings(prev => prev ? { ...prev, ...updates } : null);
     } catch (error) {
       console.error('Failed to update settings:', error);
     }
@@ -151,7 +127,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         DB.run(
           'INSERT INTO Active_Session (id, workout_id, routine_id, start_time, is_paused, is_swapped, draft_data, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
-          [sessionId, workout.id, routineId, startTime, 0, 0, draftData, lastModified]
+          [sessionId, workout.id, routineId, startTime, false, false, draftData, lastModified]
         );
 
         setActiveSession({ 
@@ -211,8 +187,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       DB.transaction(() => {
         DB.run(
-          'UPDATE Active_Session SET draft_data = ?, is_swapped = 1, last_modified = ? WHERE id = ?;',
-          [draftData, lastModified, activeSession.id]
+          'UPDATE Active_Session SET draft_data = ?, is_swapped = ?, last_modified = ? WHERE id = ?;',
+          [draftData, true, lastModified, activeSession.id]
         );
 
         setDraftSets(newDraftSets);
@@ -232,7 +208,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       DB.transaction(() => {
         DB.run(
           'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
-          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, activeSession.is_swapped ? 1 : 0, lastModified]
+          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, activeSession.is_swapped, lastModified]
         );
 
         Object.entries(draftSets).forEach(([exerciseId, sets]) => {
@@ -244,11 +220,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   generateId(),
                   activeSession.id,
                   exerciseId,
-                  SetType.WORKING, // Default to working
+                  SetType.WORKING, 
                   set.weight || null,
                   set.reps || null,
                   set.time_ms || null,
-                  set.is_skipped ? 1 : 0,
+                  set.is_skipped,
                   index,
                   lastModified
                 ]

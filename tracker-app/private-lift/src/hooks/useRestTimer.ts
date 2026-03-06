@@ -1,11 +1,41 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { useWorkout } from '../store/WorkoutContext';
+import { Platform } from 'react-native';
 
 export const useRestTimer = () => {
   const { settings } = useWorkout();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerAlerts = useCallback(async () => {
+    if (!settings) return;
+
+    if (settings.rest_timer_vibrate && Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+
+    if (settings.rest_timer_sound) {
+      // Note: In a real app, we'd bundle a specific alert sound. 
+      // For now, we'll use a placeholder or system-like behavior if possible.
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+           { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' } // Simple beep
+        );
+        await sound.playAsync();
+        // Unload after playing
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync();
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to play timer sound:', e);
+      }
+    }
+  }, [settings]);
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -28,12 +58,13 @@ export const useRestTimer = () => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           stopTimer();
+          triggerAlerts();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [settings, stopTimer]);
+  }, [settings, stopTimer, triggerAlerts]);
 
   useEffect(() => {
     return () => {

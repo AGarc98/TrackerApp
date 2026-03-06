@@ -88,20 +88,42 @@ export const query = (sql: string, params: any[] = []) => {
 };
 
 /**
- * Helper class for common database operations with full typing.
+ * Helper class for common database operations with full typing and safety features.
  */
 export class DB {
+  /**
+   * Automatically converts boolean values to 0/1 for SQLite compatibility.
+   */
+  private static prepareParams(params: any[]): any[] {
+    return params.map(p => typeof p === 'boolean' ? (p ? 1 : 0) : p);
+  }
+
+  /**
+   * Converts 0/1 values back to booleans based on simple inference.
+   * Note: Only applies to fields that seem like flags.
+   */
+  private static formatResult<T>(row: any): T {
+    const formatted = { ...row };
+    Object.keys(formatted).forEach(key => {
+      if (key.startsWith('is_') || key.endsWith('_enabled') || key.endsWith('_on')) {
+        formatted[key] = !!formatted[key];
+      }
+    });
+    return formatted as T;
+  }
+
   static getAll<T>(sql: string, params: any[] = []): T[] {
-    return select<T>(sql, params);
+    const results = select<any>(sql, this.prepareParams(params));
+    return results.map(row => this.formatResult<T>(row));
   }
 
   static getOne<T>(sql: string, params: any[] = []): T | null {
-    const results = select<T>(sql, params);
-    return results.length > 0 ? results[0] : null;
+    const result = db.getFirstSync(sql, this.prepareParams(params));
+    return result ? this.formatResult<T>(result) : null;
   }
 
   static run(sql: string, params: any[] = []): QueryResult {
-    return execute(sql, params);
+    return execute(sql, this.prepareParams(params));
   }
 
   static transaction(callback: () => void) {

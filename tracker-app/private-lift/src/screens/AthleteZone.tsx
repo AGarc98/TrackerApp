@@ -10,6 +10,78 @@ import { useRestTimer } from '../hooks/useRestTimer';
 import { WorkoutSelector } from '../components/WorkoutSelector';
 import { ExerciseSelector } from '../components/ExerciseSelector';
 
+const SetRow = memo(({ 
+  set, 
+  index, 
+  unit, 
+  onUpdate 
+}: { 
+  set: SetData, 
+  index: number, 
+  unit: string, 
+  onUpdate: (updates: Partial<SetData>) => void 
+}) => {
+  const [localWeight, setLocalWeight] = useState(set.weight?.toString() || '');
+  const [localReps, setLocalReps] = useState(set.reps?.toString() || '');
+
+  // Keep local state in sync with external changes (e.g. from DB)
+  useEffect(() => {
+    setLocalWeight(set.weight?.toString() || '');
+    setLocalReps(set.reps?.toString() || '');
+  }, [set.weight, set.reps]);
+
+  return (
+    <View className="flex-row items-center mb-4">
+      <View className={`w-12 h-12 rounded-[20px] justify-center items-center mr-4 shadow-sm ${
+        set.is_completed ? 'bg-success' : 'bg-background border border-border'
+      }`}>
+        <Text className={`font-black text-base ${set.is_completed ? 'text-surface' : 'text-text-muted/30'}`}>
+          {index + 1}
+        </Text>
+      </View>
+      
+      <View className="flex-1 flex-row space-x-3">
+        <View className="flex-1">
+          <TextInput
+            className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+            placeholder={unit}
+            placeholderTextColor="var(--color-text-muted)"
+            keyboardType="numeric"
+            value={localWeight}
+            onChangeText={setLocalWeight}
+            onBlur={() => onUpdate({ weight: parseFloat(localWeight) || undefined })}
+          />
+        </View>
+        
+        <View className="flex-1">
+          <TextInput
+            className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+            placeholder="REPS"
+            placeholderTextColor="var(--color-text-muted)"
+            keyboardType="numeric"
+            value={localReps}
+            onChangeText={setLocalReps}
+            onBlur={() => onUpdate({ reps: parseInt(localReps) || undefined })}
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        onPress={() => {
+          const newCompleted = !set.is_completed;
+          onUpdate({ is_completed: newCompleted });
+        }}
+        activeOpacity={0.7}
+        className={`w-14 h-14 rounded-2xl justify-center items-center ml-4 shadow-md ${
+          set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
+        }`}
+      >
+        <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 const ExerciseItem = memo(({ 
   exerciseId, 
   exercise, 
@@ -42,49 +114,13 @@ const ExerciseItem = memo(({
     </View>
     
     {sets.map((set, index) => (
-      <View key={set.id} className="flex-row items-center mb-4">
-        <View className={`w-12 h-12 rounded-[20px] justify-center items-center mr-4 shadow-sm ${
-          set.is_completed ? 'bg-success' : 'bg-background border border-border'
-        }`}>
-          <Text className={`font-black text-base ${set.is_completed ? 'text-surface' : 'text-text-muted/30'}`}>
-            {index + 1}
-          </Text>
-        </View>
-        
-        <View className="flex-1 flex-row space-x-3">
-          <View className="flex-1">
-            <TextInput
-              className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-              placeholder={unit}
-              placeholderTextColor="var(--color-text-muted)"
-              keyboardType="numeric"
-              value={set.weight?.toString()}
-              onChangeText={(v) => onUpdateSet(exerciseId, index, { weight: parseFloat(v) || undefined })}
-            />
-          </View>
-          
-          <View className="flex-1">
-            <TextInput
-              className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-              placeholder="REPS"
-              placeholderTextColor="var(--color-text-muted)"
-              keyboardType="numeric"
-              value={set.reps?.toString()}
-              onChangeText={(v) => onUpdateSet(exerciseId, index, { reps: parseInt(v) || undefined })}
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => onUpdateSet(exerciseId, index, { is_completed: !set.is_completed })}
-          activeOpacity={0.7}
-          className={`w-14 h-14 rounded-2xl justify-center items-center ml-4 shadow-md ${
-            set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
-          }`}
-        >
-          <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
-        </TouchableOpacity>
-      </View>
+      <SetRow 
+        key={set.id} 
+        set={set} 
+        index={index} 
+        unit={unit} 
+        onUpdate={(updates) => onUpdateSet(exerciseId, index, updates)} 
+      />
     ))}
   </View>
 ));
@@ -219,12 +255,17 @@ export const AthleteZone = () => {
     const wasCompleted = newSets[setIndex].is_completed;
     newSets[setIndex] = { ...newSets[setIndex], ...updates };
     
-    if (!wasCompleted && newSets[setIndex].is_completed && settings?.rest_timer_enabled) {
-      startTimer();
+    // Respect rest timer settings
+    const autoStartEnabled = settings?.auto_start_rest_timer ?? true;
+    const timerEnabled = settings?.rest_timer_enabled ?? true;
+
+    if (!wasCompleted && newSets[setIndex].is_completed && timerEnabled && autoStartEnabled) {
+      const exercise = exercises.find(e => e.id === exerciseId);
+      startTimer(exercise?.default_rest_duration);
     }
     
     logSet(exerciseId, newSets);
-  }, [draftSets, logSet, settings?.rest_timer_enabled, startTimer]);
+  }, [draftSets, logSet, settings, startTimer, exercises]);
 
   const handleSwapTrigger = useCallback((exerciseId: string) => {
     setExerciseToSwap(exerciseId);

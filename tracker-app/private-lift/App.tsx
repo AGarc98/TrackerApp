@@ -37,7 +37,7 @@ function AppContent() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className={`flex-1 ${themeClass} bg-background`} key={settings?.theme}>
+      <View className={`flex-1 ${themeClass} bg-background`}>
         <View className="flex-1">
           {renderContent()}
         </View>
