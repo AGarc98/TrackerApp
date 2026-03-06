@@ -1,45 +1,588 @@
 {
   "exercises": [
-    { "id": "ex-bench-press", "name": "Bench Press", "muscle_group": "CHEST", "type": "STRENGTH", "description": "Standard barbell bench press", "is_base_content": 1 },
-    { "id": "ex-pull-ups", "name": "Pull Ups", "muscle_group": "BACK", "type": "BODYWEIGHT", "description": "Wide grip pull ups", "is_base_content": 1 },
-    { "id": "ex-overhead-press", "name": "Overhead Press", "muscle_group": "SHOULDERS", "type": "STRENGTH", "description": "Standing barbell overhead press", "is_base_content": 1 },
-    { "id": "ex-squat", "name": "Barbell Squat", "muscle_group": "LEGS_QUADS", "type": "STRENGTH", "description": "Back squat with barbell", "is_base_content": 1 },
-    { "id": "ex-deadlift", "name": "Deadlift", "muscle_group": "BACK", "type": "STRENGTH", "description": "Conventional barbell deadlift", "is_base_content": 1 },
-    { "id": "ex-bicep-curls", "name": "Bicep Curls", "muscle_group": "BICEPS", "type": "STRENGTH", "description": "Dumbbell bicep curls", "is_base_content": 1 },
-    { "id": "ex-tricep-ext", "name": "Tricep Extensions", "muscle_group": "TRICEPS", "type": "STRENGTH", "description": "Overhead dumbbell tricep extension", "is_base_content": 1 },
-    { "id": "ex-calf-raises", "name": "Calf Raises", "muscle_group": "CALVES", "type": "STRENGTH", "description": "Standing calf raises", "is_base_content": 1 },
-    { "id": "ex-plank", "name": "Plank", "muscle_group": "CORE", "type": "ISOMETRIC", "description": "Standard forearm plank", "is_base_content": 1 },
-    { "id": "ex-running", "name": "Running", "muscle_group": "CARDIO", "type": "ENDURANCE", "description": "Jogging or running", "is_base_content": 1 }
+    {
+      "id": "ex-barbell-bench-press",
+      "name": "Barbell Bench Press",
+      "description": "A classic compound chest exercise performed on a flat bench using a barbell.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest", "Triceps", "Front Deltoids"]
+    },
+    {
+      "id": "ex-incline-barbell-bench-press",
+      "name": "Incline Barbell Bench Press",
+      "description": "Bench press performed on an inclined bench to emphasize the upper chest.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Upper Chest", "Front Deltoids", "Triceps"]
+    },
+    {
+      "id": "ex-decline-barbell-bench-press",
+      "name": "Decline Barbell Bench Press",
+      "description": "Bench press on a decline bench to target the lower pectoral muscles.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lower Chest", "Triceps"]
+    },
+    {
+      "id": "ex-dumbbell-bench-press",
+      "name": "Dumbbell Bench Press",
+      "description": "Flat bench press using dumbbells for a greater range of motion and stabilizer recruitment.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest", "Triceps", "Front Deltoids"]
+    },
+    {
+      "id": "ex-incline-dumbbell-bench-press",
+      "name": "Incline Dumbbell Bench Press",
+      "description": "Dumbbell press on an incline bench to target the upper pectoral muscles.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Upper Chest", "Front Deltoids", "Triceps"]
+    },
+    {
+      "id": "ex-machine-chest-press",
+      "name": "Machine Chest Press",
+      "description": "A seated chest press machine that provides a controlled path for chest isolation.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest", "Triceps"]
+    },
+    {
+      "id": "ex-cable-chest-fly",
+      "name": "Cable Chest Fly",
+      "description": "Using cable pulleys to perform a flying motion, maintaining constant tension on the pecs.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest"]
+    },
+    {
+      "id": "ex-pec-deck-machine",
+      "name": "Pec Deck Machine",
+      "description": "An isolation exercise for the chest performed on a fly machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest"]
+    },
+    {
+      "id": "ex-push-up",
+      "name": "Push-up",
+      "description": "The fundamental bodyweight chest exercise.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Chest", "Triceps", "Shoulders"]
+    },
+    {
+      "id": "ex-weighted-push-up",
+      "name": "Weighted Push-up",
+      "description": "Push-ups performed with a weight plate on the back or a weighted vest.",
+      "type": "WEIGHTED_BW",
+      "muscle_groups": ["Chest", "Triceps", "Shoulders"]
+    },
+    {
+      "id": "ex-chest-dips",
+      "name": "Chest Dips",
+      "description": "A compound movement using parallel bars. Lean forward to target the lower chest.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Lower Chest", "Triceps", "Shoulders"]
+    },
+    {
+      "id": "ex-weighted-dips",
+      "name": "Weighted Dips",
+      "description": "Dips performed with a weight belt or holding a dumbbell between the legs.",
+      "type": "WEIGHTED_BW",
+      "muscle_groups": ["Lower Chest", "Triceps", "Shoulders"]
+    },
+    {
+      "id": "ex-barbell-deadlift",
+      "name": "Barbell Deadlift",
+      "description": "A fundamental compound lift pulling weight from the floor to standing.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Hamstrings", "Glutes", "Lower Back", "Traps", "Forearms"]
+    },
+    {
+      "id": "ex-romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "description": "A deadlift variation focusing on the eccentric phase to target hamstrings and glutes.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Hamstrings", "Glutes", "Lower Back"]
+    },
+    {
+      "id": "ex-pull-up",
+      "name": "Pull Up",
+      "description": "A fundamental bodyweight vertical pull using an overhand grip.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Lats", "Biceps", "Upper Back"]
+    },
+    {
+      "id": "ex-chin-up",
+      "name": "Chin-up",
+      "description": "Bodyweight vertical pull using an underhand grip, increasing bicep involvement.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Lats", "Biceps", "Upper Back"]
+    },
+    {
+      "id": "ex-weighted-pull-up",
+      "name": "Weighted Pull-up",
+      "description": "Pull-ups performed with added weight from a belt or dumbbell.",
+      "type": "WEIGHTED_BW",
+      "muscle_groups": ["Lats", "Upper Back", "Biceps"]
+    },
+    {
+      "id": "ex-lat-pulldown",
+      "name": "Lat Pulldown (Standard)",
+      "description": "Conventional cable pulldown for back width.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Rear Deltoids", "Biceps"]
+    },
+    {
+      "id": "ex-wide-grip-lat-pulldown",
+      "name": "Wide Grip Lat Pulldown",
+      "description": "A vertical pulling exercise on a cable machine using a wide bar.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Rear Deltoids", "Biceps"]
+    },
+    {
+      "id": "ex-close-grip-lat-pulldown",
+      "name": "Close Grip Lat Pulldown",
+      "description": "Vertical pull with a narrow, neutral grip.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Biceps"]
+    },
+    {
+      "id": "ex-seated-cable-row",
+      "name": "Seated Cable Row",
+      "description": "A horizontal pull performed on a cable machine to build back thickness.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Mid-Back", "Lats", "Biceps"]
+    },
+    {
+      "id": "ex-bent-over-barbell-row",
+      "name": "Bent Over Barbell Row",
+      "description": "A heavy horizontal pull using a barbell for overall back development.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Mid-Back", "Lats", "Lower Back", "Biceps"]
+    },
+    {
+      "id": "ex-bent-over-dumbbell-row",
+      "name": "Bent Over Dumbbell Row",
+      "description": "Horizontal pull with dumbbells for back thickness.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Mid-Back", "Rear Deltoids"]
+    },
+    {
+      "id": "ex-one-arm-dumbbell-row",
+      "name": "One-Arm Dumbbell Row",
+      "description": "Rowing a dumbbell while supporting yourself with the other hand.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Mid-Back", "Rear Deltoids"]
+    },
+    {
+      "id": "ex-barbell-standing-press",
+      "name": "Barbell Standing Press",
+      "description": "A fundamental overhead press performed while standing.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Shoulders", "Triceps", "Core"]
+    },
+    {
+      "id": "ex-seated-dumbbell-shoulder-press",
+      "name": "Seated Dumbbell Shoulder Press",
+      "description": "Overhead press using dumbbells while seated for better shoulder isolation.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Front Deltoids", "Side Deltoids", "Triceps"]
+    },
+    {
+      "id": "ex-arnold-press",
+      "name": "Arnold Press",
+      "description": "A shoulder press variation that starts with palms facing you and rotates as you press up.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Shoulders", "Triceps"]
+    },
+    {
+      "id": "ex-dumbbell-lateral-raise",
+      "name": "Dumbbell Lateral Raise",
+      "description": "An isolation exercise for the lateral deltoid to build shoulder width.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Side Deltoids"]
+    },
+    {
+      "id": "ex-front-raise",
+      "name": "Dumbbell Front Raise",
+      "description": "Isolating the front deltoid.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Front Deltoids"]
+    },
+    {
+      "id": "ex-cable-face-pull",
+      "name": "Cable Face Pull",
+      "description": "A pull towards the face to target the rear delts and improve posture.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Rear Deltoids", "Upper Back", "Rotator Cuff"]
+    },
+    {
+      "id": "ex-barbell-shrug",
+      "name": "Barbell Shrug",
+      "description": "Building the upper traps with a barbell.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Traps"]
+    },
+    {
+      "id": "ex-dumbbell-shrug",
+      "name": "Dumbbell Shrug",
+      "description": "Building the upper traps with dumbbells.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Traps"]
+    },
+    {
+      "id": "ex-barbell-back-squat",
+      "name": "Barbell Back Squat",
+      "description": "The 'King' of leg exercises. A compound movement with a barbell across the upper back.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads", "Glutes", "Hamstrings", "Lower Back"]
+    },
+    {
+      "id": "ex-45-degree-leg-press",
+      "name": "45 Degree Leg Press",
+      "description": "A compound leg exercise performed on an angled sled machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads", "Glutes", "Hamstrings"]
+    },
+    {
+      "id": "ex-bulgarian-split-squat",
+      "name": "Bulgarian Split Squat",
+      "description": "Single-leg squat with the rear foot elevated on a bench.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads", "Glutes", "Hamstrings"]
+    },
+    {
+      "id": "ex-seated-leg-extension",
+      "name": "Seated Leg Extension",
+      "description": "Isolation exercise for the quadriceps performed on a machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads"]
+    },
+    {
+      "id": "ex-seated-hamstring-curl",
+      "name": "Seated Hamstring Curl",
+      "description": "Isolation exercise for the hamstrings performed on a machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Hamstrings"]
+    },
+    {
+      "id": "ex-standing-calf-raise",
+      "name": "Standing Calf Raise",
+      "description": "Calf exercise performed by rising onto the toes from a standing position.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Calves"]
+    },
+    {
+      "id": "ex-machine-hip-adductor",
+      "name": "Machine Hip Adductor",
+      "description": "Closing the legs against resistance to target the inner thighs.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Adductors"]
+    },
+    {
+      "id": "ex-machine-hip-abductor",
+      "name": "Machine Hip Abductor",
+      "description": "Opening the legs against resistance to target the outer glutes.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Gluteus Medius", "Abductors"]
+    },
+    {
+      "id": "ex-ez-bar-bicep-curl",
+      "name": "EZ Bar Bicep Curl",
+      "description": "Curling a cambered bar to reduce wrist strain while targeting the biceps.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps", "Forearms"]
+    },
+    {
+      "id": "ex-dumbbell-bicep-curl",
+      "name": "Dumbbell Bicep Curl",
+      "description": "Bicep isolation using dumbbells.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps", "Forearms"]
+    },
+    {
+      "id": "ex-alternating-hammer-curl",
+      "name": "Alternating Hammer Curl",
+      "description": "Curls with a neutral grip (palms facing in) to target the brachialis and forearms.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps", "Brachialis", "Forearms"]
+    },
+    {
+      "id": "ex-concentration-curl",
+      "name": "Concentration Curl",
+      "description": "Seated isolation curl to peak the bicep.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps"]
+    },
+    {
+      "id": "ex-cable-bicep-curl",
+      "name": "Cable Bicep Curl",
+      "description": "Constant tension bicep curl using a cable machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps"]
+    },
+    {
+      "id": "ex-machine-bicep-curl",
+      "name": "Machine Bicep Curl",
+      "description": "Controlled bicep isolation on a machine.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps"]
+    },
+    {
+      "id": "ex-tricep-rope-pushdown",
+      "name": "Tricep Rope Pushdown",
+      "description": "Extension exercise on a cable machine using a rope attachment.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Triceps"]
+    },
+    {
+      "id": "ex-overhead-dumbbell-tricep-extension",
+      "name": "Overhead Dumbbell Tricep Extension",
+      "description": "Stretching the long head of the triceps overhead.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Triceps"]
+    },
+    {
+      "id": "ex-close-grip-bench-press",
+      "name": "Close Grip Bench Press",
+      "description": "Bench press with a narrow grip to shift the focus from the chest to the triceps.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Triceps", "Chest"]
+    },
+    {
+      "id": "ex-plank",
+      "name": "Plank",
+      "description": "Core stability exercise holding a push-up position on forearms.",
+      "type": "ISOMETRIC",
+      "muscle_groups": ["Abs", "Core", "Lower Back"]
+    },
+    {
+      "id": "ex-wall-sit",
+      "name": "Wall Sit",
+      "description": "Holding a squat position with the back against a wall to build leg endurance.",
+      "type": "ISOMETRIC",
+      "muscle_groups": ["Quads"]
+    },
+    {
+      "id": "ex-burpees",
+      "name": "Burpees",
+      "description": "A full-body exercise combining a squat, push-up, and jump for cardiovascular health.",
+      "type": "ENDURANCE",
+      "muscle_groups": ["Full Body", "Cardio"]
+    },
+    {
+      "id": "ex-kettlebell-swing",
+      "name": "Kettlebell Swing",
+      "description": "An explosive hip hinge movement using a kettlebell for power and conditioning.",
+      "type": "ENDURANCE",
+      "muscle_groups": ["Hamstrings", "Glutes", "Back", "Cardio"]
+    }
   ],
   "workouts": [
     {
-      "id": "w-push-alpha",
-      "name": "Push Alpha",
+      "id": "chest-focus",
+      "name": "Horizontal Press Power",
+      "description": "A high-volume session from the 2020 split focusing on building the pectoral base.",
       "exercises": [
-        { "exercise_id": "ex-bench-press", "order_index": 0, "target_sets": 3, "target_reps": 10 },
-        { "exercise_id": "ex-overhead-press", "order_index": 1, "target_sets": 3, "target_reps": 10 },
-        { "exercise_id": "ex-tricep-ext", "order_index": 2, "target_sets": 3, "target_reps": 12 }
+        { "exercise_id": "ex-barbell-bench-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-incline-barbell-bench-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-chest-dips", "target_sets": 4, "target_reps": 12 },
+        { "exercise_id": "ex-machine-chest-press", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-pec-deck-machine", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-dumbbell-bench-press", "target_sets": 3, "target_reps": 10 }
       ]
     },
     {
-      "id": "w-pull-alpha",
-      "name": "Pull Alpha",
+      "id": "back-focus",
+      "name": "Back Width & Posterior Chain",
+      "description": "Balances heavy deadlifting with high-volume pulling.",
       "exercises": [
-        { "exercise_id": "ex-deadlift", "order_index": 0, "target_sets": 3, "target_reps": 5 },
-        { "exercise_id": "ex-pull-ups", "order_index": 1, "target_sets": 3, "target_reps": 10 },
-        { "exercise_id": "ex-bicep-curls", "order_index": 2, "target_sets": 3, "target_reps": 12 }
+        { "exercise_id": "ex-barbell-deadlift", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-pull-up", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-lat-pulldown", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-bent-over-dumbbell-row", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-seated-cable-row", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-wide-grip-lat-pulldown", "target_sets": 3, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "shoulders-focus",
+      "name": "Shoulder Cap & V-Taper",
+      "description": "Targets all three heads of the deltoid.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-standing-press", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-seated-dumbbell-shoulder-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-arnold-press", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-dumbbell-lateral-raise", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-front-raise", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-cable-face-pull", "target_sets": 3, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "arms-focus",
+      "name": "Bicep & Tricep Overload",
+      "description": "Dedicated arm day utilizing compound movements and isolation.",
+      "exercises": [
+        { "exercise_id": "ex-tricep-rope-pushdown", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-close-grip-bench-press", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-weighted-dips", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-ez-bar-bicep-curl", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-dumbbell-bicep-curl", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-concentration-curl", "target_sets": 3, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "upper-antagonist",
+      "name": "Upper Body Push/Pull",
+      "description": "Pairs heavy horizontal and vertical movements for the chest and back.",
+      "exercises": [
+        { "exercise_id": "ex-pull-up", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-lat-pulldown", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-seated-cable-row", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-barbell-bench-press", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-incline-barbell-bench-press", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-pec-deck-machine", "target_sets": 4, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "accessory-antagonist",
+      "name": "Arms, Shoulders & Core",
+      "description": "Focuses on the secondary upper body muscles.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-standing-press", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-front-raise", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-tricep-rope-pushdown", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-close-grip-bench-press", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-ez-bar-bicep-curl", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-machine-bicep-curl", "target_sets": 4, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "universal-legs",
+      "name": "The Leg Engine",
+      "description": "The quintessential leg workout focusing on heavy squatting and isolation.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-back-squat", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-seated-leg-extension", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-seated-hamstring-curl", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-machine-hip-adductor", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-machine-hip-abductor", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-standing-calf-raise", "target_sets": 4, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "push-a",
+      "name": "Alpha Push (Power)",
+      "description": "Session A of the PPL split focuses on heavy flat benching.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-bench-press", "target_sets": 5, "target_reps": 6 },
+        { "exercise_id": "ex-incline-dumbbell-bench-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-barbell-standing-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-dumbbell-lateral-raise", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-close-grip-bench-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-chest-dips", "target_sets": 4, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "pull-a",
+      "name": "Alpha Pull (Width)",
+      "description": "Emphasizes vertical pulling and high-tension bicep work.",
+      "exercises": [
+        { "exercise_id": "ex-pull-up", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-seated-cable-row", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-wide-grip-lat-pulldown", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-cable-face-pull", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-ez-bar-bicep-curl", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-alternating-hammer-curl", "target_sets": 4, "target_reps": 8 }
+      ]
+    },
+    {
+      "id": "legs-a",
+      "name": "Alpha Legs (Strength)",
+      "description": "A high-intensity, lower-rep session for maximum weight.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-back-squat", "target_sets": 5, "target_reps": 5 },
+        { "exercise_id": "ex-seated-leg-extension", "target_sets": 4, "target_reps": 6 },
+        { "exercise_id": "ex-seated-hamstring-curl", "target_sets": 4, "target_reps": 6 },
+        { "exercise_id": "ex-machine-hip-adductor", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-machine-hip-abductor", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-standing-calf-raise", "target_sets": 4, "target_reps": 10 }
+      ]
+    },
+    {
+      "id": "push-b",
+      "name": "Beta Push (Hypertrophy)",
+      "description": "Session B shifts focus to the upper chest and accessory tricep work.",
+      "exercises": [
+        { "exercise_id": "ex-incline-barbell-bench-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-pec-deck-machine", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-arnold-press", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-front-raise", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-tricep-rope-pushdown", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-overhead-dumbbell-tricep-extension", "target_sets": 4, "target_reps": 8 }
+      ]
+    },
+    {
+      "id": "pull-b",
+      "name": "Beta Pull (Thickness)",
+      "description": "Features the deadlift and rowing variations for mid-back thickness.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-deadlift", "target_sets": 5, "target_reps": 5 },
+        { "exercise_id": "ex-bent-over-barbell-row", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-close-grip-lat-pulldown", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-dumbbell-shrug", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-dumbbell-bicep-curl", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-cable-bicep-curl", "target_sets": 4, "target_reps": 8 }
+      ]
+    },
+    {
+      "id": "legs-b",
+      "name": "Beta Legs (Volume)",
+      "description": "Increases rep ranges to prioritize time under tension.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-back-squat", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-seated-leg-extension", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-seated-hamstring-curl", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-machine-hip-adductor", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-machine-hip-abductor", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-standing-calf-raise", "target_sets": 4, "target_reps": 10 }
       ]
     }
   ],
   "routines": [
     {
-      "id": "r-ppl-basic",
-      "name": "Basic Push/Pull",
-      "mode": "ASYNC",
-      "duration": 12,
+      "id": "classic-hypertrophy-split",
+      "name": "The Aesthetic Architect",
+      "description": "The ultimate 5-day traditional bodybuilding split. Perfect for those wanting to sculpt a classic physique.",
+      "mode": "WEEKLY",
+      "duration": 7,
       "workouts": [
-        { "workout_id": "w-push-alpha", "order_index": 0 },
-        { "workout_id": "w-pull-alpha", "order_index": 1 }
+        { "workout_id": "chest-focus", "day_of_week": 1 },
+        { "workout_id": "back-focus", "day_of_week": 2 },
+        { "workout_id": "universal-legs", "day_of_week": 3 },
+        { "workout_id": "shoulders-focus", "day_of_week": 4 },
+        { "workout_id": "arms-focus", "day_of_week": 5 }
+      ]
+    },
+    {
+      "id": "efficiency-strength-3day",
+      "name": "The High-Performance Minimalist",
+      "description": "Maximum results in minimum time using antagonist training. Ideal for busy professionals.",
+      "mode": "ASYNC",
+      "duration": 7,
+      "workouts": [
+        { "workout_id": "upper-antagonist", "day_of_week": 1 },
+        { "workout_id": "accessory-antagonist", "day_of_week": 3 },
+        { "workout_id": "universal-legs", "day_of_week": 5 }
+      ]
+    },
+    {
+      "id": "modern-ppl-rotation",
+      "name": "The Elite Push-Pull-Legs Protocol",
+      "description": "The gold standard of modern training. Targets every muscle group twice a week.",
+      "mode": "WEEKLY",
+      "duration": 7,
+      "workouts": [
+        { "workout_id": "push-a", "day_of_week": 1 },
+        { "workout_id": "pull-a", "day_of_week": 2 },
+        { "workout_id": "legs-a", "day_of_week": 3 },
+        { "workout_id": "push-b", "day_of_week": 4 },
+        { "workout_id": "pull-b", "day_of_week": 5 },
+        { "workout_id": "legs-b", "day_of_week": 6 }
       ]
     }
   ]

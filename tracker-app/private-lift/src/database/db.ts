@@ -10,51 +10,36 @@ export interface QueryResult {
 
 export const initDatabase = async () => {
   try {
+    // 1. Temporarily disable foreign keys to allow dropping tables with relationships
+    db.execSync('PRAGMA foreign_keys = OFF;');
+    
+    // 2. Drop all existing tables for a "Hard Reset" (Development Mode)
+    const tables = [
+      'Exercises', 'Exercise_Muscle_Groups', 'Workouts', 'Workout_Exercises', 
+      'Routines', 'Routine_Workouts', 'Logged_Sessions', 'Logged_Sets', 
+      'User_Biometrics', 'Active_Session', 'User_Settings'
+    ];
+
+    for (const table of tables) {
+      db.execSync(`DROP TABLE IF EXISTS ${table};`);
+    }
+
+    // 3. Re-enable foreign keys
     db.execSync('PRAGMA foreign_keys = ON;');
     
-    // Split SCHEMA_V1 into individual statements
+    // 4. Split SCHEMA_V1 into individual statements and execute
     const statements = SCHEMA_V1.split(';').filter(s => s.trim() !== '');
-    
     for (const statement of statements) {
       db.execSync(statement);
     }
 
-    // Basic migration check for last_modified column (added in recent update)
-    const exerciseInfo = db.getAllSync("PRAGMA table_info(Exercises);");
-    const hasLastModified = exerciseInfo.some((col: any) => col.name === 'last_modified');
-    if (!hasLastModified) {
-      db.execSync('ALTER TABLE Exercises ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0;');
-      db.execSync('ALTER TABLE Workouts ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0;');
-      db.execSync('ALTER TABLE Routines ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0;');
-    }
+    // 5. Initialize User Settings with default values
+    db.runSync(
+      'INSERT INTO User_Settings (id, weight_unit, theme, last_modified) VALUES (1, "KG", "base", ?);', 
+      [Date.now()]
+    );
 
-    // Migration check for User_Biometrics (measured_at and last_modified columns)
-    const biometricsInfo = db.getAllSync("PRAGMA table_info(User_Biometrics);");
-    const hasMeasuredAt = biometricsInfo.some((col: any) => col.name === 'measured_at');
-    const hasBiometricsLastModified = biometricsInfo.some((col: any) => col.name === 'last_modified');
-    
-    if (!hasMeasuredAt) {
-      try {
-        db.execSync('ALTER TABLE User_Biometrics ADD COLUMN measured_at INTEGER NOT NULL DEFAULT 0;');
-      } catch (e) {
-        console.warn('Could not add measured_at to User_Biometrics', e);
-      }
-    }
-    if (!hasBiometricsLastModified) {
-      try {
-        db.execSync('ALTER TABLE User_Biometrics ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0;');
-      } catch (e) {
-        console.warn('Could not add last_modified to User_Biometrics', e);
-      }
-    }
-    
-    // Ensure User_Settings exists
-    const check = db.getAllSync('SELECT COUNT(*) as count FROM User_Settings;');
-    if ((check[0] as any).count === 0) {
-      db.runSync('INSERT INTO User_Settings (id, weight_unit, last_modified) VALUES (1, "KG", ?);', [Date.now()]);
-    }
-
-    console.log('Database initialized successfully');
+    console.log('Database hard-reset and initialized successfully');
   } catch (error) {
     console.error('Failed to initialize database:', error);
     throw error;
