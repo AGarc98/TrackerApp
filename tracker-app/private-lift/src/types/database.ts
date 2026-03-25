@@ -79,6 +79,7 @@ export interface Routine {
   description: string | null;
   mode: RoutineMode;
   duration: number; // Cycles or weeks
+  start_day_index: number; // 0-6 Monday-indexed
   cycle_count: number;
   last_modified: number;
 }

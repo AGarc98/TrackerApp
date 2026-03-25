@@ -9,6 +9,7 @@ import { BiometricsLogger } from '../components/BiometricsLogger';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { WorkoutSelector } from '../components/WorkoutSelector';
 import { ExerciseSelector } from '../components/ExerciseSelector';
+import { ScheduleView } from '../components/ScheduleView';
 
 const SetRow = memo(({ 
   set, 
@@ -193,71 +194,66 @@ export const AthleteZone = () => {
     let workoutExercises: { exercise: ExerciseWithMuscle; target_sets: number; target_reps: number | null }[] = [];
 
     if (activeRoutineId) {
-      const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutineId]);
+      const routine = DB.getOne<Routine>('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
       
-      if (mappings.length > 0) {
-        const nextIndex = routineProgress.completed % mappings.length;
-        const nextMapping = mappings[nextIndex];
-
-        if (!nextMapping.workout_id) {
+      if (routine?.mode === RoutineMode.WEEKLY) {
+        const currentDayIndex = (new Date().getDay() + 6) % 7; // 0=Mon, 6=Sun
+        const shiftedDayIndex = (currentDayIndex - (routine.start_day_index || 0) + 7) % 7;
+        const mapping = DB.getOne<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? AND day_of_week = ?;', [activeRoutineId, shiftedDayIndex]);
+        
+        if (!mapping || !mapping.workout_id) {
           Alert.alert(
             'Recovery Protocol',
-            'Today is scheduled as a Rest Day in your blueprint. Would you like to bypass and start the next workout anyway?',
+            'Today is scheduled as a Rest Day in your blueprint. Would you like to select a different workout?',
             [
               { text: 'Rest', style: 'cancel' },
-              { text: 'Bypass', onPress: async () => {
-                // Find next non-rest day
-                let found = false;
-                for (let i = 1; i < mappings.length; i++) {
-                  const lookAhead = mappings[(nextIndex + i) % mappings.length];
-                  if (lookAhead.workout_id) {
-                    const w = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [lookAhead.workout_id]);
-                    if (w) {
-                      const exRes = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [w.id]);
-                      const wex = exRes.map((we: any) => ({
-                        exercise: {
-                          id: we.exercise_id,
-                          name: we.name,
-                          description: we.description,
-                          type: we.type,
-                          muscle_group: we.muscle_group,
-                          last_modified: we.exercise_last_modified,
-                          default_rest_duration: we.default_rest_duration || 90
-                        } as ExerciseWithMuscle,
-                        target_sets: we.target_sets,
-                        target_reps: we.target_reps
-                      }));
-                      await startWorkout(w, wex, activeRoutineId);
-                      found = true;
-                      break;
-                    }
-                  }
-                }
-                if (!found) Alert.alert('Vault Error', 'No active workouts found in this routine.');
-              }}
+              { text: 'Select', onPress: () => setWorkoutSelectorVisible(true) }
             ]
           );
           return;
         }
+        targetWorkout = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [mapping.workout_id]);
+      } else {
+        // ASYNC or default fallback
+        const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutineId]);
+        
+        if (mappings.length > 0) {
+          const nextIndex = routineProgress.completed % mappings.length;
+          const nextMapping = mappings[nextIndex];
 
-        targetWorkout = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]);
-
-        if (targetWorkout) {
-          const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
-          workoutExercises = exResult.map((we: any) => ({
-            exercise: {
-              id: we.exercise_id,
-              name: we.name,
-              description: we.description,
-              type: we.type,
-              muscle_group: we.muscle_group,
-              last_modified: we.exercise_last_modified,
-              default_rest_duration: we.default_rest_duration || 90
-            } as ExerciseWithMuscle,
-            target_sets: we.target_sets,
-            target_reps: we.target_reps
-          }));
+          if (!nextMapping.workout_id) {
+            // Handle Rest Day in ASYNC (if any)
+            Alert.alert(
+              'Recovery Protocol',
+              'Next in sequence is a Rest Day. Bypass?',
+              [
+                { text: 'Rest', style: 'cancel' },
+                { text: 'Bypass', onPress: () => {
+                  // logic to find next workout
+                }}
+              ]
+            );
+            return;
+          }
+          targetWorkout = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]);
         }
+      }
+
+      if (targetWorkout) {
+        const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+        workoutExercises = exResult.map((we: any) => ({
+          exercise: {
+            id: we.exercise_id,
+            name: we.name,
+            description: we.description,
+            type: we.type,
+            muscle_group: we.muscle_group,
+            last_modified: we.exercise_last_modified,
+            default_rest_duration: we.default_rest_duration || 90
+          } as ExerciseWithMuscle,
+          target_sets: we.target_sets,
+          target_reps: we.target_reps
+        }));
       }
     }
 
@@ -347,10 +343,17 @@ export const AthleteZone = () => {
       <View className="flex-1 bg-background">
         <Header />
         <ScrollView 
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingVertical: 24, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="bg-surface p-10 rounded-[50px] shadow-2xl shadow-text-main/5 items-center border border-border w-full mb-8">
+          {activeRoutine && (
+            <ScheduleView 
+              activeRoutine={activeRoutine} 
+              completedSessionsCount={routineProgress.completed} 
+            />
+          )}
+
+          <View className="mx-6 bg-surface p-10 rounded-[50px] shadow-2xl shadow-text-main/5 items-center border border-border">
             <Text className="text-3xl font-black text-text-main mb-2 tracking-tighter text-center">Athlete Zone</Text>
             <Text className="text-text-muted font-medium text-center mb-10 leading-5">
               Vault initialized. Prepared to execute next performance directive.

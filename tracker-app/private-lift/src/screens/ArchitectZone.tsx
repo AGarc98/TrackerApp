@@ -149,8 +149,9 @@ export const ArchitectZone = () => {
         }
         editingRoutine.workout_mappings.forEach((wId, idx) => {
           if (wId) {
-            DB.run('INSERT INTO Routine_Workouts (id, routine_id, workout_id, order_index, last_modified) VALUES (?, ?, ?, ?, ?);', 
-              [Math.random().toString(36).substring(2, 15), rId, wId, idx, lastModified]);
+            const dayOfWeek = editingRoutine.mode === RoutineMode.WEEKLY ? idx : null;
+            DB.run('INSERT INTO Routine_Workouts (id, routine_id, workout_id, day_of_week, order_index, last_modified) VALUES (?, ?, ?, ?, ?, ?);', 
+              [Math.random().toString(36).substring(2, 15), rId, wId, dayOfWeek, idx, lastModified]);
           }
         });
       });

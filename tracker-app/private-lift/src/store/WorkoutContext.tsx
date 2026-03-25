@@ -15,7 +15,7 @@ interface WorkoutContextType {
   finishWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   resumeWorkout: () => Promise<void>;
-  setActiveRoutine: (routineId: string | null, duration?: number) => Promise<void>;
+  setActiveRoutine: (routineId: string | null, duration?: number, startDayIndex?: number) => Promise<void>;
   updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
 }
 
@@ -69,13 +69,31 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     loadData();
   }, [loadData]);
 
-  const setActiveRoutine = async (routineId: string | null, duration?: number) => {
+  const setActiveRoutine = async (routineId: string | null, duration?: number, startDayIndex?: number) => {
     try {
       const lastModified = Date.now();
       DB.run('UPDATE User_Settings SET active_routine_id = ?, last_modified = ? WHERE id = 1;', [routineId, lastModified]);
       
-      if (routineId && duration !== undefined) {
-        DB.run('UPDATE Routines SET duration = ?, last_modified = ? WHERE id = ?;', [duration, lastModified, routineId]);
+      if (routineId) {
+        if (duration !== undefined || startDayIndex !== undefined) {
+          const updates: string[] = [];
+          const params: any[] = [];
+          
+          if (duration !== undefined) {
+            updates.push('duration = ?');
+            params.push(duration);
+          }
+          if (startDayIndex !== undefined) {
+            updates.push('start_day_index = ?');
+            params.push(startDayIndex);
+          }
+          
+          updates.push('last_modified = ?');
+          params.push(lastModified);
+          params.push(routineId);
+          
+          DB.run(`UPDATE Routines SET ${updates.join(', ')} WHERE id = ?;`, params);
+        }
       }
 
       setActiveRoutineId(routineId);

@@ -9,11 +9,14 @@ interface RoutineSelectorProps {
   onClose: () => void;
 }
 
+const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onClose }) => {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customDuration, setCustomDuration] = useState<string>('');
+  const [selectedStartDay, setSelectedStartDay] = useState<number>(0);
   const { activeRoutineId, setActiveRoutine } = useWorkout();
 
   useEffect(() => {
@@ -31,8 +34,8 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
     }
   };
 
-  const handleSelect = async (id: string, duration?: number) => {
-    await setActiveRoutine(id === activeRoutineId && !duration ? null : id, duration);
+  const handleSelect = async (id: string, duration?: number, startDay?: number) => {
+    await setActiveRoutine(id === activeRoutineId && !duration && startDay === undefined ? null : id, duration, startDay);
     if (onSelect) onSelect(id);
     onClose();
   };
@@ -44,6 +47,7 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
     } else {
       setSelectedId(routine.id);
       setCustomDuration(routine.duration.toString());
+      setSelectedStartDay(routine.start_day_index || 0);
     }
   };
 
@@ -125,7 +129,7 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
                   {isSelected && (
                     <View className="bg-background px-6 py-6 border-t border-border">
                       <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Adjust Plan Duration</Text>
-                      <View className="flex-row space-x-3">
+                      <View className="flex-row space-x-3 mb-6">
                         <View className="flex-1 bg-surface rounded-2xl border border-border px-4 py-3 flex-row items-center">
                           <TextInput
                             className="flex-1 text-text-main font-black text-lg p-0"
@@ -137,15 +141,38 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
                           />
                           <Text className="text-[10px] font-black text-text-muted/50 uppercase ml-2">Cycles</Text>
                         </View>
-                        <TouchableOpacity
-                          onPress={() => handleSelect(item.id, parseInt(customDuration) || item.duration)}
-                          className="bg-primary px-6 rounded-2xl justify-center items-center shadow-lg shadow-primary/20"
-                        >
-                          <Text className="text-surface font-black uppercase tracking-widest text-[10px]">
-                            {isActive ? 'Update' : 'Activate'}
-                          </Text>
-                        </TouchableOpacity>
                       </View>
+
+                      <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Routine Start Day</Text>
+                      <View className="flex-row flex-wrap mb-6">
+                        {WEEK_DAYS.map((day, idx) => (
+                          <TouchableOpacity
+                            key={day}
+                            onPress={() => setSelectedStartDay(idx)}
+                            className={`mr-2 mb-2 px-4 py-2 rounded-xl border ${
+                              selectedStartDay === idx 
+                                ? 'bg-primary border-primary' 
+                                : 'bg-surface border-border'
+                            }`}
+                          >
+                            <Text className={`font-black text-[10px] uppercase tracking-widest ${
+                              selectedStartDay === idx ? 'text-surface' : 'text-text-muted'
+                            }`}>
+                              {day}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => handleSelect(item.id, parseInt(customDuration) || item.duration, selectedStartDay)}
+                        className="bg-primary w-full py-5 rounded-2xl justify-center items-center shadow-lg shadow-primary/20"
+                      >
+                        <Text className="text-surface font-black uppercase tracking-widest text-xs">
+                          {isActive ? 'Update Strategy' : 'Activate Blueprint'}
+                        </Text>
+                      </TouchableOpacity>
+
                       {isActive && (
                         <TouchableOpacity 
                           onPress={() => handleSelect(item.id)}

@@ -70,13 +70,14 @@ export const seedDatabase = async () => {
         if (r.workouts) {
           r.workouts.forEach((rw: any, index) => {
             const rwId = `${r.id}-rw-${index}`;
+            const dayOfWeek = typeof rw.day_of_week === 'number' ? rw.day_of_week - 1 : null;
             DB.run(
               'INSERT OR IGNORE INTO Routine_Workouts (id, routine_id, workout_id, day_of_week, week_number, order_index, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
               [
                 rwId, 
                 r.id, 
                 rw.workout_id, 
-                rw.day_of_week ?? null,
+                dayOfWeek,
                 rw.week_number ?? 1,
                 rw.order_index ?? index, 
                 now

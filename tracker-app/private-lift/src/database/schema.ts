@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS Routines (
   description TEXT, -- High-level goal/notes
   mode TEXT NOT NULL, -- Enum: WEEKLY, ASYNC
   duration INTEGER NOT NULL,
+  start_day_index INTEGER DEFAULT 0, -- (0-6) Monday-indexed start day
   cycle_count INTEGER DEFAULT 0,
   last_modified INTEGER NOT NULL -- Timestamp
 );
