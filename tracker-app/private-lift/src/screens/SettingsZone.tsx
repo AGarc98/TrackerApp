@@ -111,6 +111,8 @@ export const SettingsZone = () => {
               value={localName}
               onChangeText={setLocalName}
               onBlur={() => wrapUpdate({ user_name: localName })}
+              returnKeyType="done"
+              onSubmitEditing={() => wrapUpdate({ user_name: localName })}
             />
           </View>
         </View>

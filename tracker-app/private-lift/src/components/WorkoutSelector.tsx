@@ -19,16 +19,10 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
 
   const loadWorkouts = async () => {
     try {
-      const result = DB.getAll<Workout>(
-        `SELECT w.* FROM Workouts w 
-         JOIN Routine_Workouts rw ON w.id = rw.workout_id 
-         WHERE rw.routine_id = ? 
-         ORDER BY rw.order_index ASC;`,
-        [routineId]
-      );
+      const result = DB.getAll<Workout>('SELECT * FROM Workouts ORDER BY name ASC;');
       setWorkouts(result);
     } catch (error) {
-      console.error('Failed to load workouts for routine:', error);
+      console.error('Failed to load all workouts:', error);
     } finally {
       setLoading(false);
     }
@@ -37,7 +31,7 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
   const handleSelect = async (workout: Workout) => {
     try {
       const exResult = DB.getAll<any>(
-        `SELECT we.*, e.name, e.description, e.type, e.last_modified, emg.muscle_group
+        `SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group
          FROM Workout_Exercises we 
          JOIN Exercises e ON we.exercise_id = e.id 
          LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1
@@ -53,7 +47,8 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
           description: we.description,
           type: we.type,
           muscle_group: we.muscle_group,
-          last_modified: we.last_modified
+          last_modified: we.exercise_last_modified,
+          default_rest_duration: we.default_rest_duration || 90
         } as any,
         target_sets: we.target_sets,
         target_reps: we.target_reps

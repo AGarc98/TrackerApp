@@ -36,7 +36,7 @@ export const DataZone = () => {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View className="px-6 pt-6 pb-4 bg-background">
+      <View className="px-6 pt-2 pb-4 bg-background">
         <View className="flex-row items-center space-x-3">
           <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
             <Text className="text-surface text-base font-black italic">D</Text>

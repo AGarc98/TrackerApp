@@ -177,7 +177,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newSets: SetData[] = oldSets.map(s => ({
         ...s,
         id: generateId().substring(0, 8), 
-        is_completed: false,
+        is_completed: false, // Reset completion but keep weight/reps
       }));
 
       const newDraftSets = { ...draftSets };
@@ -190,10 +190,10 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           'UPDATE Active_Session SET draft_data = ?, is_swapped = ?, last_modified = ? WHERE id = ?;',
           [draftData, true, lastModified, activeSession.id]
         );
-
-        setDraftSets(newDraftSets);
-        setActiveSession(prev => prev ? { ...prev, is_swapped: true, draft_data: draftData, last_modified: lastModified } : null);
       });
+
+      setDraftSets(newDraftSets);
+      setActiveSession(prev => prev ? { ...prev, is_swapped: true, draft_data: draftData, last_modified: lastModified } : null);
     } catch (error) {
       console.error('Failed to swap exercise:', error);
     }
@@ -243,10 +243,10 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         DB.run('DELETE FROM Active_Session WHERE id = ?;', [activeSession.id]);
-
-        setActiveSession(null);
-        setDraftSets({});
       });
+
+      setActiveSession(null);
+      setDraftSets({});
       Alert.alert('Success', 'Workout vault updated.');
     } catch (error) {
       console.error('Failed to finish workout:', error);

@@ -198,6 +198,48 @@ export const AthleteZone = () => {
       if (mappings.length > 0) {
         const nextIndex = routineProgress.completed % mappings.length;
         const nextMapping = mappings[nextIndex];
+
+        if (!nextMapping.workout_id) {
+          Alert.alert(
+            'Recovery Protocol',
+            'Today is scheduled as a Rest Day in your blueprint. Would you like to bypass and start the next workout anyway?',
+            [
+              { text: 'Rest', style: 'cancel' },
+              { text: 'Bypass', onPress: async () => {
+                // Find next non-rest day
+                let found = false;
+                for (let i = 1; i < mappings.length; i++) {
+                  const lookAhead = mappings[(nextIndex + i) % mappings.length];
+                  if (lookAhead.workout_id) {
+                    const w = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [lookAhead.workout_id]);
+                    if (w) {
+                      const exRes = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [w.id]);
+                      const wex = exRes.map((we: any) => ({
+                        exercise: {
+                          id: we.exercise_id,
+                          name: we.name,
+                          description: we.description,
+                          type: we.type,
+                          muscle_group: we.muscle_group,
+                          last_modified: we.exercise_last_modified,
+                          default_rest_duration: we.default_rest_duration || 90
+                        } as ExerciseWithMuscle,
+                        target_sets: we.target_sets,
+                        target_reps: we.target_reps
+                      }));
+                      await startWorkout(w, wex, activeRoutineId);
+                      found = true;
+                      break;
+                    }
+                  }
+                }
+                if (!found) Alert.alert('Vault Error', 'No active workouts found in this routine.');
+              }}
+            ]
+          );
+          return;
+        }
+
         targetWorkout = DB.getOne<Workout>('SELECT * FROM Workouts WHERE id = ?;', [nextMapping.workout_id]);
 
         if (targetWorkout) {
@@ -273,7 +315,7 @@ export const AthleteZone = () => {
   }, []);
 
   const Header = ({ showActivePill }: { showActivePill?: boolean }) => (
-    <View className="px-6 pt-6 pb-4 bg-background">
+    <View className="px-6 pt-2 pb-4 bg-background">
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center space-x-3">
           <View className="w-8 h-8 bg-primary rounded-xl items-center justify-center rotate-6 shadow-md shadow-primary/20">

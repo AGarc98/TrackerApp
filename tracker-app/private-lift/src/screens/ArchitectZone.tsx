@@ -194,8 +194,8 @@ export const ArchitectZone = () => {
   const renderPickerOverlay = () => {
     if (!pickerVisible) return null;
     return (
-      <View className="absolute inset-0 bg-text-main/80 justify-center p-6 z-[1000] rounded-t-[40px]">
-        <View className="bg-surface rounded-[40px] p-6 max-h-[80%] shadow-2xl">
+      <View className="absolute inset-0 bg-text-main/90 justify-center p-6 z-[9999]" style={{ elevation: 100 }}>
+        <View className="bg-surface rounded-[40px] p-6 max-h-[85%] shadow-2xl">
           <Text className="text-xl font-black mb-4 text-center uppercase tracking-widest text-text-muted">Select {pickerType}</Text>
           <FlatList<ExerciseWithMuscle | Workout>
             data={pickerType === 'exercise' ? exercises : days}
@@ -203,6 +203,7 @@ export const ArchitectZone = () => {
             renderItem={({ item }) => (
               <TouchableOpacity 
                 onPress={() => { if (currentPickerCallback) currentPickerCallback(item.id, item.name); setPickerVisible(false); }} 
+                activeOpacity={0.7}
                 className="p-4 border-b border-border active:bg-background"
               >
                 <Text className="font-bold text-text-main text-lg">{item.name}</Text>
@@ -239,12 +240,12 @@ export const ArchitectZone = () => {
               if (item.mode === RoutineMode.WEEKLY) mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
               setEditingRoutine({ ...item, workout_mappings });
               setRoutineModalVisible(true);
-            }} className="bg-background p-3 rounded-2xl mr-2"><Text className="text-text-muted font-bold text-xs">Edit</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="bg-background p-3 rounded-2xl mr-2"><Text className="text-accent font-bold text-xs">Del</Text></TouchableOpacity>
+            }} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-accent font-black text-[10px] uppercase tracking-widest">Del</Text></TouchableOpacity>
             <TouchableOpacity onPress={async () => {
               const newId = isActive ? null : item.id;
               await setActiveRoutine(newId);
-            }} className={`p-3 rounded-2xl ${isActive ? 'bg-accent-soft' : 'bg-primary'}`}><Text className={`font-bold text-xs ${isActive ? 'text-accent' : 'text-surface'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
+            }} className={`p-3 px-4 rounded-2xl shadow-sm ${isActive ? 'bg-accent-soft' : 'bg-primary'}`}><Text className={`font-black text-[10px] uppercase tracking-widest ${isActive ? 'text-accent' : 'text-surface'}`}>{isActive ? 'Stop' : 'Start'}</Text></TouchableOpacity>
           </View>
         </View>
         <Text className="text-text-muted text-[10px] font-black uppercase tracking-[2px]">Progress: {item.cycle_count} Completed</Text>
@@ -254,7 +255,7 @@ export const ArchitectZone = () => {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="px-6 pt-6 pb-4 bg-background">
+      <View className="px-6 pt-2 pb-4 bg-background">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center space-x-3">
             <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
@@ -353,8 +354,8 @@ export const ArchitectZone = () => {
 
       {/* Day Architect Modal */}
       <Modal visible={dayModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 justify-end bg-text-main/60">
+        <View className="flex-1 justify-end bg-text-main/60">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
             <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
               <View className="w-12 h-1.5 bg-background rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-6">Day Architect</Text>
@@ -362,9 +363,15 @@ export const ArchitectZone = () => {
                 <Text className="text-xs font-black text-text-muted mb-2 uppercase tracking-widest px-1">Label</Text>
                 <TextInput className="bg-background border border-border rounded-2xl p-4 mb-6 text-text-main font-bold" placeholder="e.g. Push Day" placeholderTextColor="var(--color-text-muted)" value={editingDay?.name} onChangeText={(t) => setEditingDay({ ...editingDay!, name: t })} />
                 <View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-text-muted uppercase tracking-widest">Exercises</Text>
-                  <TouchableOpacity onPress={() => openExercisePicker((id, name) => {
-                    setEditingDay(prev => prev ? { ...prev, exercises: [...prev.exercises, { id: Math.random().toString(36).substring(2, 9), exercise_id: id, name, target_sets: 3, target_reps: 10 }] } : null);
-                  })} className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"><Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => openExercisePicker((id, name) => {
+                      setEditingDay(prev => prev ? { ...prev, exercises: [...prev.exercises, { id: Math.random().toString(36).substring(2, 9), exercise_id: id, name, target_sets: 3, target_reps: 10 }] } : null);
+                    })} 
+                    className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"
+                  >
+                    <Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text>
+                  </TouchableOpacity>
                 </View>
                 {editingDay?.exercises.map((ex, idx) => (
                   <View key={idx} className="bg-background rounded-3xl p-5 mb-3 border border-border">
@@ -386,16 +393,16 @@ export const ArchitectZone = () => {
                 <TouchableOpacity onPress={() => setDayModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-text-muted font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
                 <TouchableOpacity onPress={handleSaveDay} className="flex-[2] bg-primary py-5 rounded-2xl"><Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Commit Day</Text></TouchableOpacity>
               </View>
-              {renderPickerOverlay()}
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+          {renderPickerOverlay()}
+        </View>
       </Modal>
 
       {/* Routine Blueprint Modal */}
       <Modal visible={routineModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 justify-end bg-text-main/60">
+        <View className="flex-1 justify-end bg-text-main/60">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
             <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
               <View className="w-12 h-1.5 bg-background rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-6">Routine Blueprint</Text>
@@ -420,24 +427,36 @@ export const ArchitectZone = () => {
                 {editingRoutine?.mode === RoutineMode.WEEKLY ? (
                   <View>{WEEK_DAYS.map((dayName, idx) => (
                     <View key={dayName} className="flex-row justify-between items-center mb-3 bg-background p-4 rounded-2xl border border-border"><Text className="text-sm font-black text-text-main">{dayName}</Text>
-                      <TouchableOpacity onPress={() => openDayPicker((id) => {
-                        setEditingRoutine(prev => {
-                          if (!prev) return null;
-                          const newMaps = [...prev.workout_mappings];
-                          newMaps[idx] = id;
-                          return { ...prev, workout_mappings: newMaps };
-                        });
-                      })} className="bg-surface px-4 py-2 rounded-xl border border-border"><Text className="text-[10px] font-black text-primary uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text></TouchableOpacity>
+                      <TouchableOpacity 
+                        activeOpacity={0.7}
+                        onPress={() => openDayPicker((id) => {
+                          setEditingRoutine(prev => {
+                            if (!prev) return null;
+                            const newMaps = [...prev.workout_mappings];
+                            newMaps[idx] = id;
+                            return { ...prev, workout_mappings: newMaps };
+                          });
+                        })} 
+                        className="bg-surface px-4 py-2 rounded-xl border border-border"
+                      >
+                        <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{editingRoutine.workout_mappings[idx] ? days.find(d => d.id === editingRoutine.workout_mappings[idx])?.name || 'Assigned' : 'Rest Day'}</Text>
+                      </TouchableOpacity>
                     </View>
                   ))}</View>
                 ) : (
                   <View><View className="flex-row justify-between items-center mb-4 px-1"><Text className="text-xs font-black text-text-muted uppercase tracking-widest">Queue Sequence</Text>
-                    <TouchableOpacity onPress={() => openDayPicker((id) => {
-                      setEditingRoutine(prev => {
-                        if (!prev) return null;
-                        return { ...prev, workout_mappings: [...prev.workout_mappings, id] };
-                      });
-                    })} className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"><Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text></TouchableOpacity>
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
+                      onPress={() => openDayPicker((id) => {
+                        setEditingRoutine(prev => {
+                          if (!prev) return null;
+                          return { ...prev, workout_mappings: [...prev.workout_mappings, id] };
+                        });
+                      })} 
+                      className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"
+                    >
+                      <Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text>
+                    </TouchableOpacity>
                   </View>
                   {editingRoutine?.workout_mappings.map((wId, idx) => (
                     <View key={idx} className="flex-row justify-between items-center mb-2 bg-background p-4 rounded-2xl"><Text className="text-sm font-black text-text-main">{idx + 1}. {days.find(d => d.id === wId)?.name || 'Workout Day'}</Text>
@@ -457,11 +476,11 @@ export const ArchitectZone = () => {
                 <TouchableOpacity onPress={() => setRoutineModalVisible(false)} className="flex-1 py-5 rounded-2xl mr-4"><Text className="text-text-muted font-black text-center text-sm uppercase tracking-widest">Discard</Text></TouchableOpacity>
                 <TouchableOpacity onPress={handleSaveRoutine} className="flex-[2] bg-primary py-5 rounded-2xl shadow-xl shadow-primary/20"><Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Commit Blueprint</Text></TouchableOpacity>
               </View>
-              {renderPickerOverlay()}
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+          {renderPickerOverlay()}
+        </View>
       </Modal>
     </View>
   );
-}
+};
