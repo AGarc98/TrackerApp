@@ -5,7 +5,7 @@ import { Workout, Exercise } from '../types/database';
 
 interface WorkoutSelectorProps {
   routineId: string;
-  onSelect: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[]) => void;
+  onSelect: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[]) => void;
   onClose: () => void;
 }
 
@@ -51,7 +51,8 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
           default_rest_duration: we.default_rest_duration || 90
         } as any,
         target_sets: we.target_sets,
-        target_reps: we.target_reps
+        target_reps: we.target_reps,
+        target_weight: we.target_weight
       }));
 
       onSelect(workout, workoutExercises);

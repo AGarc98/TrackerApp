@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
-import { Exercise, MuscleGroup } from '../types/database';
-
-type ExerciseWithMuscle = Exercise & { muscle_group: MuscleGroup };
+import { Exercise, MuscleGroup, ExerciseWithMuscle } from '../types/database';
 
 interface ExerciseSelectorProps {
   exercises: ExerciseWithMuscle[];
@@ -20,10 +18,13 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredExercises = exercises.filter(ex => {
-    const matchesSearch = (ex.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                         (ex.muscle_group?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesName = (ex.name?.toLowerCase() || '').includes(searchLower);
+    const matchesPrimary = (ex.muscle_group?.toLowerCase() || '').includes(searchLower);
+    const matchesSecondary = ex.muscle_groups?.some(mg => mg.toLowerCase().includes(searchLower)) || false;
+    
     const isNotExcluded = !excludeIds.includes(ex.id);
-    return matchesSearch && isNotExcluded;
+    return (matchesName || matchesPrimary || matchesSecondary) && isNotExcluded;
   });
 
   return (

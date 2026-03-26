@@ -9,7 +9,7 @@ interface WorkoutContextType {
   draftSets: Record<string, SetData[]>;
   isLoading: boolean;
   settings: UserSettings | null;
-  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[], routineId?: string | null) => Promise<void>;
+  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[], routineId?: string | null) => Promise<void>;
   logSet: (exerciseId: string, sets: SetData[]) => Promise<void>;
   swapExercise: (oldExerciseId: string, newExerciseId: string) => Promise<void>;
   finishWorkout: () => Promise<void>;
@@ -122,7 +122,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null }[], routineId: string | null = null) => {
+  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null; target_time_ms?: number | null; target_distance?: number | null }[], routineId: string | null = null) => {
     try {
       const sessionId = generateId();
       const startTime = Date.now();
@@ -134,7 +134,10 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           id: generateId().substring(0, 8),
           is_skipped: false,
           is_completed: false,
-          reps: ex.target_reps || undefined
+          reps: ex.target_reps || undefined,
+          weight: ex.target_weight || undefined,
+          time_ms: ex.target_time_ms || undefined,
+          distance: ex.target_distance || undefined
         }));
       });
 
@@ -233,7 +236,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           sets.forEach((set, index) => {
             if (set.is_completed || set.is_skipped) {
               DB.run(
-                'INSERT INTO Logged_Sets (id, session_id, exercise_id, set_type, weight, reps, time_ms, is_skipped, order_index, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+                'INSERT INTO Logged_Sets (id, session_id, exercise_id, set_type, weight, reps, time_ms, distance, notes, is_skipped, order_index, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
                 [
                   generateId(),
                   activeSession.id,
@@ -242,7 +245,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   set.weight || null,
                   set.reps || null,
                   set.time_ms || null,
-                  set.is_skipped,
+                  set.distance || null,
+                  set.notes || null,
+                  set.is_skipped ? 1 : 0,
                   index,
                   lastModified
                 ]

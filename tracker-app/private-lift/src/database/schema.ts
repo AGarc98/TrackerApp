@@ -142,4 +142,11 @@ CREATE TABLE IF NOT EXISTS User_Settings (
   last_modified INTEGER NOT NULL, -- Timestamp
   FOREIGN KEY (active_routine_id) REFERENCES Routines (id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_logged_sessions_start_time ON Logged_Sessions(start_time);
+CREATE INDEX IF NOT EXISTS idx_exercise_muscle_groups_muscle_group ON Exercise_Muscle_Groups(muscle_group);
+CREATE INDEX IF NOT EXISTS idx_logged_sets_session_id ON Logged_Sets(session_id);
+CREATE INDEX IF NOT EXISTS idx_logged_sets_exercise_id ON Logged_Sets(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_workout_exercises_workout_id ON Workout_Exercises(workout_id);
+CREATE INDEX IF NOT EXISTS idx_routine_workouts_routine_id ON Routine_Workouts(routine_id);
 `;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { useWorkout } from '../store/WorkoutContext';
 import { DB } from '../database/db';
-import { Exercise, Workout, SetData, Routine, RoutineMode, MuscleGroup, ExerciseWithMuscle } from '../types/database';
+import { Workout, SetData, Routine, RoutineMode, ExerciseWithMuscle, ExerciseType } from '../types/database';
 import { SettingsZone } from './SettingsZone';
 import { RoutineSelector } from '../components/RoutineSelector';
 import { BiometricsLogger } from '../components/BiometricsLogger';
@@ -15,70 +15,104 @@ const SetRow = memo(({
   set, 
   index, 
   unit, 
+  exerciseType,
   onUpdate 
 }: { 
   set: SetData, 
   index: number, 
   unit: string, 
+  exerciseType?: ExerciseType,
   onUpdate: (updates: Partial<SetData>) => void 
 }) => {
   const [localWeight, setLocalWeight] = useState(set.weight?.toString() || '');
   const [localReps, setLocalReps] = useState(set.reps?.toString() || '');
+  const [localTime, setLocalTime] = useState(set.time_ms ? (set.time_ms / 1000).toString() : '');
+  const [localDistance, setLocalDistance] = useState(set.distance?.toString() || '');
 
-  // Keep local state in sync with external changes (e.g. from DB)
   useEffect(() => {
     setLocalWeight(set.weight?.toString() || '');
     setLocalReps(set.reps?.toString() || '');
-  }, [set.weight, set.reps]);
+    setLocalTime(set.time_ms ? (set.time_ms / 1000).toString() : '');
+    setLocalDistance(set.distance?.toString() || '');
+  }, [set.weight, set.reps, set.time_ms, set.distance]);
+
+  const isEndurance = exerciseType === ExerciseType.ENDURANCE;
 
   return (
-    <View className="flex-row items-center mb-4">
-      <View className={`w-12 h-12 rounded-[20px] justify-center items-center mr-4 shadow-sm ${
-        set.is_completed ? 'bg-success' : 'bg-background border border-border'
-      }`}>
-        <Text className={`font-black text-base ${set.is_completed ? 'text-surface' : 'text-text-muted/30'}`}>
-          {index + 1}
-        </Text>
-      </View>
-      
-      <View className="flex-1 flex-row space-x-3">
-        <View className="flex-1">
-          <TextInput
-            className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-            placeholder={unit}
-            placeholderTextColor="var(--color-text-muted)"
-            keyboardType="numeric"
-            value={localWeight}
-            onChangeText={setLocalWeight}
-            onBlur={() => onUpdate({ weight: parseFloat(localWeight) || undefined })}
-          />
+    <View className="mb-4">
+      <View className="flex-row items-center">
+        <View className={`w-12 h-12 rounded-[20px] justify-center items-center mr-4 shadow-sm ${
+          set.is_completed ? 'bg-success' : 'bg-background border border-border'
+        }`}>
+          <Text className={`font-black text-base ${set.is_completed ? 'text-surface' : 'text-text-muted/30'}`}>
+            {index + 1}
+          </Text>
         </View>
         
-        <View className="flex-1">
-          <TextInput
-            className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-            placeholder="REPS"
-            placeholderTextColor="var(--color-text-muted)"
-            keyboardType="numeric"
-            value={localReps}
-            onChangeText={setLocalReps}
-            onBlur={() => onUpdate({ reps: parseInt(localReps) || undefined })}
-          />
+        <View className="flex-1 flex-row space-x-3">
+          {isEndurance ? (
+            <>
+              <View className="flex-1">
+                <TextInput
+                  className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+                  placeholder="SEC"
+                  placeholderTextColor="var(--color-text-muted)"
+                  keyboardType="numeric"
+                  value={localTime}
+                  onChangeText={setLocalTime}
+                  onBlur={() => onUpdate({ time_ms: (parseFloat(localTime) * 1000) || undefined })}
+                />
+              </View>
+              <View className="flex-1">
+                <TextInput
+                  className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+                  placeholder="DIST"
+                  placeholderTextColor="var(--color-text-muted)"
+                  keyboardType="numeric"
+                  value={localDistance}
+                  onChangeText={setLocalDistance}
+                  onBlur={() => onUpdate({ distance: parseFloat(localDistance) || undefined })}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <View className="flex-1">
+                <TextInput
+                  className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+                  placeholder={unit}
+                  placeholderTextColor="var(--color-text-muted)"
+                  keyboardType="numeric"
+                  value={localWeight}
+                  onChangeText={setLocalWeight}
+                  onBlur={() => onUpdate({ weight: parseFloat(localWeight) || undefined })}
+                />
+              </View>
+              <View className="flex-1">
+                <TextInput
+                  className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
+                  placeholder="REPS"
+                  placeholderTextColor="var(--color-text-muted)"
+                  keyboardType="numeric"
+                  value={localReps}
+                  onChangeText={setLocalReps}
+                  onBlur={() => onUpdate({ reps: parseInt(localReps) || undefined })}
+                />
+              </View>
+            </>
+          )}
         </View>
-      </View>
 
-      <TouchableOpacity
-        onPress={() => {
-          const newCompleted = !set.is_completed;
-          onUpdate({ is_completed: newCompleted });
-        }}
-        activeOpacity={0.7}
-        className={`w-14 h-14 rounded-2xl justify-center items-center ml-4 shadow-md ${
-          set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
-        }`}
-      >
-        <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onUpdate({ is_completed: !set.is_completed })}
+          activeOpacity={0.7}
+          className={`w-14 h-14 rounded-2xl justify-center items-center ml-4 shadow-md ${
+            set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
+          }`}
+        >
+          <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 });
@@ -102,8 +136,13 @@ const ExerciseItem = memo(({
     <View className="flex-row justify-between items-start mb-8">
       <View className="flex-1 mr-4">
         <Text className="text-2xl font-black text-text-main leading-tight mb-2 tracking-tighter">{exercise?.name || 'Unknown Movement'}</Text>
-        <View className="bg-background self-start px-2 py-1 rounded-lg border border-border">
-          <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">{exercise?.muscle_group || 'General'}</Text>
+        <View className="flex-row flex-wrap gap-2">
+          <View className="bg-background px-2 py-1 rounded-lg border border-border">
+            <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">{exercise?.muscle_group || 'General'}</Text>
+          </View>
+          <View className="bg-primary-soft px-2 py-1 rounded-lg border border-primary/10">
+            <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{exercise?.type || 'Strength'}</Text>
+          </View>
         </View>
       </View>
       <TouchableOpacity
@@ -120,6 +159,7 @@ const ExerciseItem = memo(({
         set={set} 
         index={index} 
         unit={unit} 
+        exerciseType={exercise?.type}
         onUpdate={(updates) => onUpdateSet(exerciseId, index, updates)} 
       />
     ))}
@@ -240,7 +280,7 @@ export const AthleteZone = () => {
       }
 
       if (targetWorkout) {
-        const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+        const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
         workoutExercises = exResult.map((we: any) => ({
           exercise: {
             id: we.exercise_id,
@@ -252,7 +292,10 @@ export const AthleteZone = () => {
             default_rest_duration: we.default_rest_duration || 90
           } as ExerciseWithMuscle,
           target_sets: we.target_sets,
-          target_reps: we.target_reps
+          target_reps: we.target_reps,
+          target_weight: we.target_weight,
+          target_time_ms: we.target_time_ms,
+          target_distance: we.target_distance
         }));
       }
     }
@@ -263,7 +306,7 @@ export const AthleteZone = () => {
         Alert.alert('Vault Empty', 'Architect some workouts and routines first.');
         return;
       }
-      const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, emg.muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1 WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
+      const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
       workoutExercises = exResult.map((we: any) => ({
         exercise: {
           id: we.exercise_id,
@@ -275,7 +318,10 @@ export const AthleteZone = () => {
           default_rest_duration: we.default_rest_duration || 90
         } as ExerciseWithMuscle,
         target_sets: we.target_sets,
-        target_reps: we.target_reps
+        target_reps: we.target_reps,
+        target_weight: we.target_weight,
+        target_time_ms: we.target_time_ms,
+        target_distance: we.target_distance
       }));
     }
 

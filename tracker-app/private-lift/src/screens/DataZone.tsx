@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 const MUSCLE_GROUPS = Object.values(MuscleGroup);
-const TIMEFRAMES = [4, 8, 12];
-type Metric = 'VOLUME' | 'INTENSITY';
+const TIMEFRAMES = [4, 8, 12, 24];
+type Metric = 'VOLUME' | 'INTENSITY' | 'DISTANCE' | 'TIME';
+
+const ENDURANCE_MUSCLES = [MuscleGroup.CARDIO, MuscleGroup.FULL_BODY];
 
 export const DataZone = () => {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>(MuscleGroup.CHEST);
@@ -13,21 +15,72 @@ export const DataZone = () => {
   const [selectedMetric, setSelectedMetric] = useState<Metric>('VOLUME');
   const { data, comparison, isLoading } = useAnalytics(selectedMuscle, selectedWeeks);
 
-  const getMetricValue = (point: any) => selectedMetric === 'VOLUME' ? point.volume : point.intensity;
-  const maxVal = Math.max(...data.map(getMetricValue), 1);
-  const currentChange = selectedMetric === 'VOLUME' ? comparison.volumeChange : comparison.intensityChange;
+  const isEnduranceFocus = useMemo(() => ENDURANCE_MUSCLES.includes(selectedMuscle), [selectedMuscle]);
 
-  const formatPercent = (val: number) => {
+  const handleMuscleSelect = useCallback((mg: MuscleGroup) => {
+    setSelectedMuscle(mg);
+    const isEndurance = ENDURANCE_MUSCLES.includes(mg);
+    if (isEndurance && (selectedMetric === 'VOLUME' || selectedMetric === 'INTENSITY')) {
+      setSelectedMetric('DISTANCE');
+    } else if (!isEndurance && (selectedMetric === 'DISTANCE' || selectedMetric === 'TIME')) {
+      setSelectedMetric('VOLUME');
+    }
+  }, [selectedMetric]);
+
+  const getMetricValue = useCallback((point: any) => {
+    switch (selectedMetric) {
+      case 'VOLUME': return point.volume;
+      case 'INTENSITY': return point.intensity;
+      case 'DISTANCE': return point.distance;
+      case 'TIME': return point.time_ms / (1000 * 60); // In minutes
+      default: return 0;
+    }
+  }, [selectedMetric]);
+
+  const maxVal = useMemo(() => Math.max(...data.map(getMetricValue), 1), [data, getMetricValue]);
+  
+  const currentChange = useMemo(() => {
+    switch (selectedMetric) {
+      case 'VOLUME': return comparison.volumeChange;
+      case 'INTENSITY': return comparison.intensityChange;
+      case 'DISTANCE': return comparison.distanceChange;
+      case 'TIME': return comparison.timeChange;
+      default: return 0;
+    }
+  }, [selectedMetric, comparison]);
+
+  const formatPercent = useCallback((val: number) => {
     const sign = val > 0 ? '+' : '';
     return `${sign}${val.toFixed(1)}%`;
-  };
+  }, []);
+
+  const getUnit = useCallback(() => {
+    switch (selectedMetric) {
+      case 'VOLUME': return ' KG';
+      case 'INTENSITY': return ' KG';
+      case 'DISTANCE': return ' KM';
+      case 'TIME': return ' MIN';
+      default: return '';
+    }
+  }, [selectedMetric]);
+
+  const averageValue = useMemo(() => {
+    const validData = data.filter(d => getMetricValue(d) > 0);
+    return (data.reduce((acc, curr) => acc + getMetricValue(curr), 0) / (validData.length || 1)).toFixed(1);
+  }, [data, getMetricValue]);
+
+  const totalPeriodValue = useMemo(() => {
+    return data.reduce((acc, curr) => acc + (isEnduranceFocus ? curr.distance : curr.volume), 0);
+  }, [data, isEnduranceFocus]);
+
+  const totalFrequency = useMemo(() => {
+    return data.reduce((acc, curr) => acc + curr.frequency, 0);
+  }, [data]);
 
   if (isLoading && data.length === 0) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
-        <View className="w-12 h-12 bg-surface rounded-3xl items-center justify-center border border-border">
-            <Text className="text-2xl">📊</Text>
-        </View>
+        <ActivityIndicator size="large" color="#8B5CF6" />
         <Text className="mt-4 text-text-muted font-bold uppercase tracking-widest text-[10px]">Analyzing Vault...</Text>
       </View>
     );
@@ -37,15 +90,22 @@ export const DataZone = () => {
     <View className="flex-1 bg-background">
       {/* Header */}
       <View className="px-6 pt-2 pb-4 bg-background">
-        <View className="flex-row items-center space-x-3">
-          <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
-            <Text className="text-surface text-base font-black italic">D</Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center space-x-3">
+            <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
+              <Text className="text-surface text-base font-black italic">D</Text>
+            </View>
+            <Text className="text-2xl font-black text-text-main tracking-tighter">Analytics</Text>
           </View>
-          <Text className="text-2xl font-black text-text-main tracking-tighter">Analytics</Text>
+          {isLoading && <ActivityIndicator size="small" color="#8B5CF6" />}
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: 40 }}
+        style={{ opacity: isLoading ? 0.6 : 1 }}
+      >
         {/* Muscle Group Selector */}
         <ScrollView 
           horizontal 
@@ -56,7 +116,8 @@ export const DataZone = () => {
           {MUSCLE_GROUPS.map((mg) => (
             <TouchableOpacity
               key={mg}
-              onPress={() => setSelectedMuscle(mg)}
+              onPress={() => handleMuscleSelect(mg)}
+              disabled={isLoading}
               className={`mr-3 px-6 py-3 rounded-2xl border ${
                 selectedMuscle === mg 
                   ? 'bg-text-main border-text-main' 
@@ -66,7 +127,7 @@ export const DataZone = () => {
               <Text className={`font-black text-xs uppercase tracking-widest ${
                 selectedMuscle === mg ? 'text-surface' : 'text-text-muted'
               }`}>
-                {mg.replace('_', ' ')}
+                {mg.replace(/_/g, ' ')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -81,6 +142,7 @@ export const DataZone = () => {
                         <TouchableOpacity
                             key={w}
                             onPress={() => setSelectedWeeks(w)}
+                            disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
                                 selectedWeeks === w ? 'bg-background shadow-sm' : ''
                             }`}
@@ -96,26 +158,57 @@ export const DataZone = () => {
             <View className="flex-row items-center justify-between">
                 <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Metric</Text>
                 <View className="flex-row bg-surface p-1 rounded-xl border border-border">
-                    <TouchableOpacity
-                        onPress={() => setSelectedMetric('VOLUME')}
-                        className={`px-4 py-1.5 rounded-lg ${
-                            selectedMetric === 'VOLUME' ? 'bg-background shadow-sm' : ''
-                        }`}
-                    >
-                        <Text className={`font-black text-xs ${
-                            selectedMetric === 'VOLUME' ? 'text-text-main' : 'text-text-muted'
-                        }`}>Volume</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setSelectedMetric('INTENSITY')}
-                        className={`px-4 py-1.5 rounded-lg ${
-                            selectedMetric === 'INTENSITY' ? 'bg-background shadow-sm' : ''
-                        }`}
-                    >
-                        <Text className={`font-black text-xs ${
-                            selectedMetric === 'INTENSITY' ? 'text-text-main' : 'text-text-muted'
-                        }`}>Intensity</Text>
-                    </TouchableOpacity>
+                    {!isEnduranceFocus ? (
+                      <>
+                        <TouchableOpacity
+                            onPress={() => setSelectedMetric('VOLUME')}
+                            disabled={isLoading}
+                            className={`px-4 py-1.5 rounded-lg ${
+                                selectedMetric === 'VOLUME' ? 'bg-background shadow-sm' : ''
+                            }`}
+                        >
+                            <Text className={`font-black text-xs ${
+                                selectedMetric === 'VOLUME' ? 'text-text-main' : 'text-text-muted'
+                            }`}>Volume</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setSelectedMetric('INTENSITY')}
+                            disabled={isLoading}
+                            className={`px-4 py-1.5 rounded-lg ${
+                                selectedMetric === 'INTENSITY' ? 'bg-background shadow-sm' : ''
+                            }`}
+                        >
+                            <Text className={`font-black text-xs ${
+                                selectedMetric === 'INTENSITY' ? 'text-text-main' : 'text-text-muted'
+                            }`}>Intensity</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                            onPress={() => setSelectedMetric('DISTANCE')}
+                            disabled={isLoading}
+                            className={`px-4 py-1.5 rounded-lg ${
+                                selectedMetric === 'DISTANCE' ? 'bg-background shadow-sm' : ''
+                            }`}
+                        >
+                            <Text className={`font-black text-xs ${
+                                selectedMetric === 'DISTANCE' ? 'text-text-main' : 'text-text-muted'
+                            }`}>Distance</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setSelectedMetric('TIME')}
+                            disabled={isLoading}
+                            className={`px-4 py-1.5 rounded-lg ${
+                                selectedMetric === 'TIME' ? 'bg-background shadow-sm' : ''
+                            }`}
+                        >
+                            <Text className={`font-black text-xs ${
+                                selectedMetric === 'TIME' ? 'text-text-main' : 'text-text-muted'
+                            }`}>Time</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
                 </View>
             </View>
         </View>
@@ -125,15 +218,12 @@ export const DataZone = () => {
             <View className="flex-row justify-between items-center mb-6">
                 <View>
                     <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-1">
-                        {selectedMetric === 'VOLUME' ? 'Weekly Volume Load' : 'Average Intensity'}
+                        Weekly {selectedMetric.toLowerCase()}
                     </Text>
                     <View className="flex-row items-center">
                         <Text className="text-2xl font-black text-text-main">
-                            {selectedMetric === 'VOLUME' 
-                                ? (data.reduce((acc, curr) => acc + curr.volume, 0) / (data.filter(d => d.volume > 0).length || 1)).toFixed(0)
-                                : (data.reduce((acc, curr) => acc + curr.intensity, 0) / (data.filter(d => d.intensity > 0).length || 1)).toFixed(1)
-                            }
-                            <Text className="text-xs text-text-muted"> KG</Text>
+                            {averageValue}
+                            <Text className="text-xs text-text-muted">{getUnit()}</Text>
                         </Text>
                         <View className={`ml-3 px-2 py-1 rounded-lg ${currentChange >= 0 ? 'bg-success/10' : 'bg-accent/10'}`}>
                             <Text className={`text-[10px] font-black ${currentChange >= 0 ? 'text-success' : 'text-accent'}`}>
@@ -151,7 +241,7 @@ export const DataZone = () => {
                         <View key={point.weekStart} className="flex-1 items-center">
                             <View 
                                 className={`w-3 rounded-full ${
-                                    val > 0 ? (selectedMetric === 'VOLUME' ? 'bg-primary' : 'bg-accent') : 'bg-border/30'
+                                    val > 0 ? (selectedMetric === 'VOLUME' || selectedMetric === 'DISTANCE' ? 'bg-primary' : 'bg-accent') : 'bg-border/30'
                                 }`}
                                 style={{ 
                                     height: `${(val / maxVal) * 100}%`,
@@ -175,18 +265,21 @@ export const DataZone = () => {
             
             <View className="flex-row space-x-4 mb-4">
                 <View className="flex-1 bg-surface p-6 rounded-[32px] border border-border">
-                    <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-2">Total Volume</Text>
-                    <Text className="text-2xl font-black text-text-main">
-                        {data.reduce((acc, curr) => acc + curr.volume, 0).toLocaleString()}
+                    <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-2">
+                      Total {isEnduranceFocus ? 'Distance' : 'Volume'}
                     </Text>
-                    <Text className={`text-[10px] font-black mt-1 ${comparison.volumeChange >= 0 ? 'text-success' : 'text-accent'}`}>
-                        {formatPercent(comparison.volumeChange)}
+                    <Text className="text-2xl font-black text-text-main">
+                        {totalPeriodValue.toLocaleString()}
+                        <Text className="text-xs text-text-muted">{isEnduranceFocus ? ' KM' : ' KG'}</Text>
+                    </Text>
+                    <Text className={`text-[10px] font-black mt-1 ${isEnduranceFocus ? (comparison.distanceChange >= 0 ? 'text-success' : 'text-accent') : (comparison.volumeChange >= 0 ? 'text-success' : 'text-accent')}`}>
+                        {formatPercent(isEnduranceFocus ? comparison.distanceChange : comparison.volumeChange)}
                     </Text>
                 </View>
                 <View className="flex-1 bg-surface p-6 rounded-[32px] border border-border">
                     <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-2">Frequency</Text>
                     <Text className="text-2xl font-black text-text-main">
-                        {data.reduce((acc, curr) => acc + curr.frequency, 0)}
+                        {totalFrequency}
                     </Text>
                     <Text className={`text-[10px] font-black mt-1 ${comparison.frequencyChange >= 0 ? 'text-success' : 'text-accent'}`}>
                         {formatPercent(comparison.frequencyChange)}
@@ -196,13 +289,13 @@ export const DataZone = () => {
 
             <View className="bg-surface p-6 rounded-[32px] border border-border">
                 <View className="flex-row justify-between items-center">
-                    <View>
+                    <View className="flex-1">
                         <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-1">Period Summary</Text>
                         <Text className="text-text-main font-bold text-sm leading-5">
-                            You've trained {selectedMuscle.toLowerCase().replace('_', ' ')} {data.reduce((acc, curr) => acc + curr.frequency, 0)} times over the last {selectedWeeks} weeks.
+                            You've trained {selectedMuscle.toLowerCase().replace(/_/g, ' ')} {totalFrequency} times over the last {selectedWeeks} weeks.
                         </Text>
                     </View>
-                    <View className="w-12 h-12 bg-primary-soft rounded-2xl items-center justify-center">
+                    <View className="w-12 h-12 bg-primary-soft rounded-2xl items-center justify-center ml-4">
                         <Text className="text-xl">📈</Text>
                     </View>
                 </View>

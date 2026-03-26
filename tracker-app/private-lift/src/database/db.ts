@@ -117,6 +117,16 @@ export class DB {
     return results.map(row => this.formatResult<T>(row));
   }
 
+  static async getAllAsync<T>(sql: string, params: any[] = []): Promise<T[]> {
+    try {
+      const results = await db.getAllAsync(sql, this.prepareParams(params)) as any[];
+      return results.map(row => this.formatResult<T>(row));
+    } catch (error) {
+      console.error('Async SELECT query failed:', sql, error);
+      throw error;
+    }
+  }
+
   static getOne<T>(sql: string, params: any[] = []): T | null {
     const result = db.getFirstSync(sql, this.prepareParams(params));
     return result ? this.formatResult<T>(result) : null;

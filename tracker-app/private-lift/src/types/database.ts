@@ -1,14 +1,45 @@
 export enum MuscleGroup {
+  // Chest
   CHEST = 'CHEST',
-  BACK = 'BACK',
-  SHOULDERS = 'SHOULDERS',
+  UPPER_CHEST = 'UPPER_CHEST',
+  LOWER_CHEST = 'LOWER_CHEST',
+  
+  // Back
+  LATS = 'LATS',
+  UPPER_BACK = 'UPPER_BACK',
+  MID_BACK = 'MID_BACK',
+  LOWER_BACK = 'LOWER_BACK',
+  TRAPS = 'TRAPS',
+  
+  // Shoulders
+  FRONT_DELTOIDS = 'FRONT_DELTOIDS',
+  SIDE_DELTOIDS = 'SIDE_DELTOIDS',
+  REAR_DELTOIDS = 'REAR_DELTOIDS',
+  SHOULDERS = 'SHOULDERS', // General
+  
+  // Arms
   BICEPS = 'BICEPS',
   TRICEPS = 'TRICEPS',
-  LEGS_QUADS = 'LEGS_QUADS',
-  LEGS_HAMS = 'LEGS_HAMS',
+  FOREARMS = 'FOREARMS',
+  BRACHIALIS = 'BRACHIALIS',
+  
+  // Legs
+  QUADS = 'QUADS',
+  HAMSTRINGS = 'HAMSTRINGS',
+  GLUTES = 'GLUTES',
+  GLUTEUS_MEDIUS = 'GLUTEUS_MEDIUS',
   CALVES = 'CALVES',
+  ADDUCTORS = 'ADDUCTORS',
+  ABDUCTORS = 'ABDUCTORS',
+  
+  // Core
+  ABS = 'ABS',
   CORE = 'CORE',
+  
+  // Misc
+  FULL_BODY = 'FULL_BODY',
   CARDIO = 'CARDIO',
+  ROTATOR_CUFF = 'ROTATOR_CUFF',
 }
 
 export enum ExerciseType {
@@ -40,7 +71,10 @@ export interface Exercise {
   last_modified: number;
 }
 
-export type ExerciseWithMuscle = Exercise & { muscle_group: MuscleGroup };
+export type ExerciseWithMuscle = Exercise & { 
+  muscle_group: MuscleGroup; // Primary for backward compatibility/quick display
+  muscle_groups?: MuscleGroup[]; // All associated groups
+};
 
 export interface ExerciseMuscleGroup {
   id: string;

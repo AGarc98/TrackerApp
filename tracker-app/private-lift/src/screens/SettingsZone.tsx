@@ -163,6 +163,16 @@ export const SettingsZone = () => {
             />
           </View>
 
+          <View className="flex-row justify-between items-center mb-6">
+            <View><Text className="text-base font-bold text-text-main">Sync History Limit</Text><Text className="text-xs text-text-muted">Months to retain in sync</Text></View>
+            <TextInput
+              className="bg-background border border-border rounded-xl px-4 py-2 w-20 text-center font-black text-text-main"
+              keyboardType="numeric"
+              value={contextSettings.sync_history_limit_months?.toString()}
+              onChangeText={(v) => wrapUpdate({ sync_history_limit_months: parseInt(v) || 0 })}
+            />
+          </View>
+
           <View className="flex-row justify-between items-center">
             <View><Text className="text-base font-bold text-text-main">Keep Screen On</Text><Text className="text-xs text-text-muted">Prevent sleep during training</Text></View>
             <Switch 
@@ -226,6 +236,22 @@ export const SettingsZone = () => {
         </View>
 
         {/* Data Management */}
+        <View className="bg-surface rounded-[32px] p-6 mb-6 shadow-sm border border-border">
+          <Text className="text-xs font-black text-text-muted uppercase tracking-widest mb-6">Vault Connectivity</Text>
+          <View className="mb-2">
+            <Text className="text-base font-bold text-text-main mb-3">Connection Token</Text>
+            <TextInput
+              className="bg-background border border-border rounded-2xl p-4 text-text-main font-bold"
+              placeholder="Enter vault token..."
+              placeholderTextColor="var(--color-text-muted)"
+              secureTextEntry
+              value={contextSettings.vault_connection_token || ''}
+              onChangeText={(v) => wrapUpdate({ vault_connection_token: v })}
+            />
+          </View>
+        </View>
+
+        {/* Data Sovereignty */}
         <View className="bg-text-main rounded-[32px] p-8 mb-20">
           <Text className="text-background text-lg font-black mb-2 tracking-tight">Data Sovereignty</Text>
           <Text className="text-text-muted text-xs mb-8">All training data is stored locally. Exporting generates an AES-256 encrypted JSON vault.</Text>

@@ -5,7 +5,8 @@ import { useWorkout } from '../store/WorkoutContext';
 
 export const BiometricsLogger = () => {
   const [weight, setWeight] = useState('');
-  const [lastWeight, setLastWeight] = useState<number | null>(null);
+  const [bodyFat, setBodyFat] = useState('');
+  const [lastEntry, setLastEntry] = useState<{ weight: number, fat?: number } | null>(null);
   const { settings } = useWorkout();
 
   useEffect(() => {
@@ -14,9 +15,9 @@ export const BiometricsLogger = () => {
 
   const loadLastEntry = async () => {
     try {
-      const result = DB.getOne<{ body_weight: number }>('SELECT body_weight FROM User_Biometrics ORDER BY measured_at DESC LIMIT 1;');
+      const result = DB.getOne<{ body_weight: number, body_fat_pct: number }>('SELECT body_weight, body_fat_pct FROM User_Biometrics ORDER BY measured_at DESC LIMIT 1;');
       if (result) {
-        setLastWeight(result.body_weight);
+        setLastEntry({ weight: result.body_weight, fat: result.body_fat_pct });
       }
     } catch (e) {
       console.error('Failed to load last biometrics:', e);
@@ -31,13 +32,17 @@ export const BiometricsLogger = () => {
 
     try {
       const now = Date.now();
+      const weightVal = parseFloat(weight);
+      const fatVal = bodyFat ? parseFloat(bodyFat) : null;
+      
       DB.run(
-        'INSERT INTO User_Biometrics (id, measured_at, body_weight, last_modified) VALUES (?, ?, ?, ?);',
-        [Math.random().toString(36).substring(2, 15), now, parseFloat(weight), now]
+        'INSERT INTO User_Biometrics (id, measured_at, body_weight, body_fat_pct, last_modified) VALUES (?, ?, ?, ?, ?);',
+        [Math.random().toString(36).substring(2, 15), now, weightVal, fatVal, now]
       );
       
-      setLastWeight(parseFloat(weight));
+      setLastEntry({ weight: weightVal, fat: fatVal || undefined });
       setWeight('');
+      setBodyFat('');
       Keyboard.dismiss();
       Alert.alert('Logged', 'Biometrics vault updated.');
     } catch (e) {
@@ -53,28 +58,45 @@ export const BiometricsLogger = () => {
           <Text className="text-xs font-black text-text-muted uppercase tracking-widest mb-1">Vault Biometrics</Text>
           <Text className="text-xl font-black text-text-main tracking-tighter">Quick-Log</Text>
         </View>
-        {lastWeight && (
-          <View className="bg-background px-3 py-1.5 rounded-xl border border-border">
-            <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Last: {lastWeight} {settings?.weight_unit || 'KG'}</Text>
+        {lastEntry && (
+          <View className="items-end">
+            <View className="bg-background px-3 py-1.5 rounded-xl border border-border mb-1">
+              <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Weight: {lastEntry.weight} {settings?.weight_unit || 'KG'}</Text>
+            </View>
+            {lastEntry.fat && (
+              <View className="bg-background px-3 py-1.5 rounded-xl border border-border">
+                <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Fat: {lastEntry.fat}%</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
 
-      <View className="flex-row space-x-3 mb-6">
-        <TextInput
-          className="flex-1 bg-background border border-border rounded-2xl p-5 text-text-main font-black text-lg shadow-sm"
-          placeholder={`Weight (${settings?.weight_unit || 'KG'})`}
-          placeholderTextColor="var(--color-text-muted)"
-          keyboardType="numeric"
-          value={weight}
-          onChangeText={setWeight}
-        />
+      <View className="space-y-4 mb-6">
+        <View className="flex-row space-x-3">
+          <TextInput
+            className="flex-1 bg-background border border-border rounded-2xl p-5 text-text-main font-black text-lg shadow-sm"
+            placeholder={`Weight (${settings?.weight_unit || 'KG'})`}
+            placeholderTextColor="var(--color-text-muted)"
+            keyboardType="numeric"
+            value={weight}
+            onChangeText={setWeight}
+          />
+          <TextInput
+            className="flex-1 bg-background border border-border rounded-2xl p-5 text-text-main font-black text-lg shadow-sm"
+            placeholder="Body Fat %"
+            placeholderTextColor="var(--color-text-muted)"
+            keyboardType="numeric"
+            value={bodyFat}
+            onChangeText={setBodyFat}
+          />
+        </View>
         <TouchableOpacity
           onPress={handleLog}
           activeOpacity={0.8}
-          className="bg-primary px-8 rounded-2xl justify-center shadow-lg shadow-primary/20"
+          className="bg-primary py-5 rounded-2xl items-center shadow-lg shadow-primary/20"
         >
-          <Text className="text-surface font-black uppercase tracking-widest text-xs">Log</Text>
+          <Text className="text-surface font-black uppercase tracking-widest text-xs">Commit Biometrics</Text>
         </TouchableOpacity>
       </View>
 
