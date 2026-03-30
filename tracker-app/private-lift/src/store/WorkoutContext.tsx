@@ -103,7 +103,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const updateSettings = async (newSettings: Partial<UserSettings>) => {
+  const updateSettings = useCallback(async (newSettings: Partial<UserSettings>) => {
     try {
       const lastModified = Date.now();
       const updates = { ...newSettings, last_modified: lastModified };
@@ -120,7 +120,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (error) {
       console.error('Failed to update settings:', error);
     }
-  };
+  }, []);
 
   const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null; target_time_ms?: number | null; target_distance?: number | null }[], routineId: string | null = null) => {
     try {
