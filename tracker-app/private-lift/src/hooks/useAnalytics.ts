@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DB } from '../database/db';
 import { MuscleGroup } from '../types/database';
+
+const DEBOUNCE_MS = 300;
 
 export interface AnalyticsDataPoint {
   weekStart: string; // ISO date string (Monday)
@@ -29,11 +31,8 @@ export const useAnalytics = (muscleGroup: MuscleGroup, weeks: number = 4) => {
     timeChange: 0 
   });
   const [isLoading, setIsLoading] = useState(true);
-  const lastRequestId = useRef<number>(0);
 
-  const fetchAnalyticsData = useCallback(async () => {
-    const currentRequest = ++lastRequestId.current;
-
+  const fetchAnalyticsData = useCallback(() => {
     setIsLoading(true);
     try {
       // Calculate the start of the current week (Monday)
@@ -68,9 +67,7 @@ export const useAnalytics = (muscleGroup: MuscleGroup, weeks: number = 4) => {
           AND ls.is_skipped = 0
       `;
 
-      const allSets = await DB.getAllAsync<any>(sql, [muscleGroup, minStartTime.getTime(), maxEndTime.getTime()]);
-
-      if (lastRequestId.current !== currentRequest) return;
+      const allSets = DB.getAll<any>(sql, [muscleGroup, minStartTime.getTime(), maxEndTime.getTime()]);
 
       // Optimization: Group sets by week index in a single pass
       const weekBuckets: any[] = Array.from({ length: totalWeeksToFetch }, () => ({
@@ -169,28 +166,25 @@ export const useAnalytics = (muscleGroup: MuscleGroup, weeks: number = 4) => {
         return ((current - previous) / previous) * 100;
       };
 
-      if (lastRequestId.current === currentRequest) {
-        setData(currentPeriod.data);
-        setComparison({
-          volumeChange: calculateChange(currentPeriod.totals.volume, previousPeriod.totals.volume),
-          intensityChange: calculateChange(currentPeriod.totals.avgIntensity, previousPeriod.totals.avgIntensity),
-          frequencyChange: calculateChange(currentPeriod.totals.frequency, previousPeriod.totals.frequency),
-          distanceChange: calculateChange(currentPeriod.totals.distance, previousPeriod.totals.distance),
-          timeChange: calculateChange(currentPeriod.totals.time, previousPeriod.totals.time),
-        });
-      }
+      setData(currentPeriod.data);
+      setComparison({
+        volumeChange: calculateChange(currentPeriod.totals.volume, previousPeriod.totals.volume),
+        intensityChange: calculateChange(currentPeriod.totals.avgIntensity, previousPeriod.totals.avgIntensity),
+        frequencyChange: calculateChange(currentPeriod.totals.frequency, previousPeriod.totals.frequency),
+        distanceChange: calculateChange(currentPeriod.totals.distance, previousPeriod.totals.distance),
+        timeChange: calculateChange(currentPeriod.totals.time, previousPeriod.totals.time),
+      });
 
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
     } finally {
-      if (lastRequestId.current === currentRequest) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [muscleGroup, weeks]);
 
   useEffect(() => {
-    fetchAnalyticsData();
+    const timer = setTimeout(fetchAnalyticsData, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [fetchAnalyticsData]);
 
   return { data, comparison, isLoading, refresh: fetchAnalyticsData };

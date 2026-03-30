@@ -11,7 +11,61 @@ import { WorkoutSelector } from '../components/WorkoutSelector';
 import { ExerciseSelector } from '../components/ExerciseSelector';
 import { ScheduleView } from '../components/ScheduleView';
 
-const SetRow = memo(({ 
+const loadWorkoutExercises = (workoutId: string) => {
+  const exResult = DB.getAll<any>(
+    `SELECT we.*, e.name, e.description, e.type, e.default_rest_duration,
+     e.last_modified as exercise_last_modified,
+     (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as muscle_group
+     FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id
+     WHERE we.workout_id = ? ORDER BY we.order_index ASC;`,
+    [workoutId]
+  );
+  return exResult.map((we: any) => ({
+    exercise: {
+      id: we.exercise_id,
+      name: we.name,
+      description: we.description,
+      type: we.type,
+      muscle_group: we.muscle_group,
+      last_modified: we.exercise_last_modified,
+      default_rest_duration: we.default_rest_duration || 90,
+    } as ExerciseWithMuscle,
+    target_sets: we.target_sets,
+    target_reps: we.target_reps,
+    target_weight: we.target_weight,
+    target_time_ms: we.target_time_ms,
+    target_distance: we.target_distance,
+  }));
+};
+
+const Header = memo(({ showActivePill, onSettingsPress }: { showActivePill?: boolean; onSettingsPress: () => void }) => (
+  <View className="px-6 pt-2 pb-4 bg-background">
+    <View className="flex-row justify-between items-center">
+      <View className="flex-row items-center space-x-3">
+        <View className="w-8 h-8 bg-primary rounded-xl items-center justify-center rotate-6 shadow-md shadow-primary/20">
+          <Text className="text-surface text-base font-black italic">L</Text>
+        </View>
+        <Text className="text-2xl font-black text-text-main tracking-tighter">Private Lift</Text>
+      </View>
+      <View className="flex-row items-center space-x-3">
+        {showActivePill && (
+          <View className="bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
+            <Text className="text-success text-[10px] font-black uppercase tracking-widest">Training</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          onPress={onSettingsPress}
+          activeOpacity={0.7}
+          className="bg-surface p-3 rounded-2xl shadow-sm border border-border"
+        >
+          <Text className="text-[10px] font-black text-text-muted uppercase tracking-[2px]">Vault</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+));
+
+const SetRow = memo(({
   set, 
   index, 
   unit, 
@@ -198,7 +252,9 @@ export const AthleteZone = () => {
     }
   }, [activeSession, hasCheckedResume]);
 
-  const loadInitialData = async () => {
+  const exercisesById = useMemo(() => new Map(exercises.map(e => [e.id, e])), [exercises]);
+
+  const loadInitialData = () => {
     const availableWorkouts = DB.getAll<Workout>('SELECT * FROM Workouts;');
     setAvailableWorkouts(availableWorkouts);
     
@@ -268,9 +324,7 @@ export const AthleteZone = () => {
               'Next in sequence is a Rest Day. Bypass?',
               [
                 { text: 'Rest', style: 'cancel' },
-                { text: 'Bypass', onPress: () => {
-                  // logic to find next workout
-                }}
+                { text: 'Bypass', onPress: () => setWorkoutSelectorVisible(true) }
               ]
             );
             return;
@@ -280,23 +334,7 @@ export const AthleteZone = () => {
       }
 
       if (targetWorkout) {
-        const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
-        workoutExercises = exResult.map((we: any) => ({
-          exercise: {
-            id: we.exercise_id,
-            name: we.name,
-            description: we.description,
-            type: we.type,
-            muscle_group: we.muscle_group,
-            last_modified: we.exercise_last_modified,
-            default_rest_duration: we.default_rest_duration || 90
-          } as ExerciseWithMuscle,
-          target_sets: we.target_sets,
-          target_reps: we.target_reps,
-          target_weight: we.target_weight,
-          target_time_ms: we.target_time_ms,
-          target_distance: we.target_distance
-        }));
+        workoutExercises = loadWorkoutExercises(targetWorkout.id);
       }
     }
 
@@ -306,23 +344,7 @@ export const AthleteZone = () => {
         Alert.alert('Vault Empty', 'Architect some workouts and routines first.');
         return;
       }
-      const exResult = DB.getAll<any>('SELECT we.*, e.name, e.description, e.type, e.default_rest_duration, e.last_modified as exercise_last_modified, (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as muscle_group FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [targetWorkout.id]);
-      workoutExercises = exResult.map((we: any) => ({
-        exercise: {
-          id: we.exercise_id,
-          name: we.name,
-          description: we.description,
-          type: we.type,
-          muscle_group: we.muscle_group,
-          last_modified: we.exercise_last_modified,
-          default_rest_duration: we.default_rest_duration || 90
-        } as ExerciseWithMuscle,
-        target_sets: we.target_sets,
-        target_reps: we.target_reps,
-        target_weight: we.target_weight,
-        target_time_ms: we.target_time_ms,
-        target_distance: we.target_distance
-      }));
+      workoutExercises = loadWorkoutExercises(targetWorkout.id);
     }
 
     if (workoutExercises.length === 0) {
@@ -344,7 +366,7 @@ export const AthleteZone = () => {
     const timerEnabled = settings?.rest_timer_enabled ?? true;
 
     if (!wasCompleted && newSets[setIndex].is_completed && timerEnabled && autoStartEnabled) {
-      const exercise = exercises.find(e => e.id === exerciseId);
+      const exercise = exercisesById.get(exerciseId);
       startTimer(exercise?.default_rest_duration);
     }
     
@@ -356,38 +378,10 @@ export const AthleteZone = () => {
     setExerciseSelectorVisible(true);
   }, []);
 
-  const Header = ({ showActivePill }: { showActivePill?: boolean }) => (
-    <View className="px-6 pt-2 pb-4 bg-background">
-      <View className="flex-row justify-between items-center">
-        <View className="flex-row items-center space-x-3">
-          <View className="w-8 h-8 bg-primary rounded-xl items-center justify-center rotate-6 shadow-md shadow-primary/20">
-            <Text className="text-surface text-base font-black italic">L</Text>
-          </View>
-          <Text className="text-2xl font-black text-text-main tracking-tighter">Private Lift</Text>
-        </View>
-        
-        <View className="flex-row items-center space-x-3">
-          {showActivePill && (
-            <View className="bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
-              <Text className="text-success text-[10px] font-black uppercase tracking-widest">Training</Text>
-            </View>
-          )}
-          <TouchableOpacity 
-            onPress={() => setSettingsVisible(true)}
-            activeOpacity={0.7}
-            className="bg-surface p-3 rounded-2xl shadow-sm border border-border"
-          >
-            <Text className="text-[10px] font-black text-text-muted uppercase tracking-[2px]">Vault</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-
   if (!activeSession || (!hasCheckedResume && Platform.OS !== 'web')) {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <Header onSettingsPress={() => setSettingsVisible(true)} />
         <ScrollView 
           contentContainerStyle={{ paddingVertical: 24, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
@@ -463,17 +457,6 @@ export const AthleteZone = () => {
           <BiometricsLogger />
         </ScrollView>
 
-        <Modal visible={settingsVisible} animationType="slide" presentationStyle="pageSheet">
-          <View className="flex-1 bg-background pt-4">
-            <View className="flex-row justify-end px-6">
-              <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
-                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
-              </TouchableOpacity>
-            </View>
-            <SettingsZone />
-          </View>
-        </Modal>
-
         <Modal visible={routineSelectorVisible} animationType="slide" presentationStyle="pageSheet">
           <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
@@ -493,15 +476,26 @@ export const AthleteZone = () => {
               </TouchableOpacity>
             </View>
             {activeRoutineId && (
-              <WorkoutSelector 
-                routineId={activeRoutineId} 
+              <WorkoutSelector
+                routineId={activeRoutineId}
                 onSelect={async (workout, exercises) => {
                   setWorkoutSelectorVisible(false);
                   await startWorkout(workout, exercises, activeRoutineId);
-                }} 
-                onClose={() => setWorkoutSelectorVisible(false)} 
+                }}
+                onClose={() => setWorkoutSelectorVisible(false)}
               />
             )}
+          </View>
+        </Modal>
+
+        <Modal visible={settingsVisible} animationType="slide" presentationStyle="pageSheet">
+          <View className="flex-1 bg-background pt-4">
+            <View className="flex-row justify-end px-6">
+              <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
+              </TouchableOpacity>
+            </View>
+            <SettingsZone />
           </View>
         </Modal>
       </View>
@@ -510,7 +504,7 @@ export const AthleteZone = () => {
 
   return (
     <View className="flex-1 bg-background">
-      <Header showActivePill />
+      <Header showActivePill onSettingsPress={() => setSettingsVisible(true)} />
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

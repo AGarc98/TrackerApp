@@ -1,15 +1,18 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useWorkout } from '../store/WorkoutContext';
 
 const MUSCLE_GROUPS = Object.values(MuscleGroup);
 const TIMEFRAMES = [4, 8, 12, 24];
+const CHART_HEIGHT = 160; // must match h-40 (10rem = 160dp)
 type Metric = 'VOLUME' | 'INTENSITY' | 'DISTANCE' | 'TIME';
 
 const ENDURANCE_MUSCLES = [MuscleGroup.CARDIO, MuscleGroup.FULL_BODY];
 
 export const DataZone = () => {
+  const { settings } = useWorkout();
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>(MuscleGroup.CHEST);
   const [selectedWeeks, setSelectedWeeks] = useState(8);
   const [selectedMetric, setSelectedMetric] = useState<Metric>('VOLUME');
@@ -55,14 +58,15 @@ export const DataZone = () => {
   }, []);
 
   const getUnit = useCallback(() => {
+    const weightUnit = settings?.weight_unit || 'KG';
     switch (selectedMetric) {
-      case 'VOLUME': return ' KG';
-      case 'INTENSITY': return ' KG';
+      case 'VOLUME': return ` ${weightUnit}`;
+      case 'INTENSITY': return ` ${weightUnit}`;
       case 'DISTANCE': return ' KM';
       case 'TIME': return ' MIN';
       default: return '';
     }
-  }, [selectedMetric]);
+  }, [selectedMetric, settings?.weight_unit]);
 
   const averageValue = useMemo(() => {
     const validData = data.filter(d => getMetricValue(d) > 0);
@@ -237,16 +241,14 @@ export const DataZone = () => {
             <View className="flex-row justify-between items-end h-40 mb-6 px-2">
                 {data.map((point, index) => {
                     const val = getMetricValue(point);
+                    const barHeight = Math.max((val / maxVal) * CHART_HEIGHT, val > 0 ? 8 : 4);
                     return (
                         <View key={point.weekStart} className="flex-1 items-center">
-                            <View 
+                            <View
                                 className={`w-3 rounded-full ${
                                     val > 0 ? (selectedMetric === 'VOLUME' || selectedMetric === 'DISTANCE' ? 'bg-primary' : 'bg-accent') : 'bg-border/30'
                                 }`}
-                                style={{ 
-                                    height: `${(val / maxVal) * 100}%`,
-                                    minHeight: val > 0 ? 8 : 4
-                                }}
+                                style={{ height: barHeight }}
                             />
                             {(index === 0 || index === data.length - 1 || (selectedWeeks <= 8 && index % 2 === 0)) && (
                                 <Text className="text-[7px] font-black text-text-muted mt-2 rotate-45 origin-left">

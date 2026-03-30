@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { SCHEMA_V1 } from './schema';
 
 const db = SQLite.openDatabaseSync('privatelift.db');
+db.execSync('PRAGMA foreign_keys = ON;');
 
 export interface QueryResult {
   rowsAffected: number;
@@ -105,7 +106,14 @@ export class DB {
   private static formatResult<T>(row: any): T {
     const formatted = { ...row };
     Object.keys(formatted).forEach(key => {
-      if (key.startsWith('is_') || key.endsWith('_enabled') || key.endsWith('_on')) {
+      if (
+        key.startsWith('is_') ||
+        key.startsWith('auto_start_') ||
+        key.endsWith('_enabled') ||
+        key.endsWith('_on') ||
+        key.endsWith('_sound') ||
+        key.endsWith('_vibrate')
+      ) {
         formatted[key] = !!formatted[key];
       }
     });

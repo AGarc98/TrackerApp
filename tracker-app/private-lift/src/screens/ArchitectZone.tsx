@@ -75,7 +75,46 @@ export const ArchitectZone = () => {
     }
   };
 
-  const handleSaveExercise = async () => {
+  const handleEditRoutine = (item: Routine) => {
+    const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [item.id]);
+    const workout_mappings: (string | null)[] = item.mode === RoutineMode.WEEKLY ? Array(7).fill(null) : mappings.map((m: any) => m.workout_id);
+    if (item.mode === RoutineMode.WEEKLY) {
+      mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
+    }
+    setEditingRoutine({ ...item, workout_mappings });
+    setRoutineModalVisible(true);
+  };
+
+  const handleEditItem = (item: any) => {
+    if (activeSubTab === 'exercises') {
+      setEditingExercise(item);
+      setExerciseModalVisible(true);
+    } else if (activeSubTab === 'days') {
+      const exResult = DB.getAll<any>('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
+      setEditingDay({
+        id: item.id,
+        name: item.name,
+        exercises: exResult.map((we: any) => ({
+          id: we.id,
+          exercise_id: we.exercise_id,
+          name: we.name,
+          target_sets: we.target_sets,
+          target_reps: we.target_reps,
+          target_weight: we.target_weight,
+          rest_period_override: we.rest_period_override,
+        })),
+      });
+      setDayModalVisible(true);
+    }
+  };
+
+  const updateDayExercise = (idx: number, field: keyof UIDayExercise, value: any) => {
+    const newExs = [...editingDay!.exercises];
+    (newExs[idx] as any)[field] = value;
+    setEditingDay({ ...editingDay!, exercises: newExs });
+  };
+
+  const handleSaveExercise = () => {
     if (!editingExercise?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const lastModified = Date.now();
@@ -113,7 +152,7 @@ export const ArchitectZone = () => {
     ]);
   };
 
-  const handleSaveDay = async () => {
+  const handleSaveDay = () => {
     if (!editingDay?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const dayId = editingDay.id || Math.random().toString(36).substring(2, 15);
@@ -145,7 +184,7 @@ export const ArchitectZone = () => {
     ]);
   };
 
-  const handleSaveRoutine = async () => {
+  const handleSaveRoutine = () => {
     if (!editingRoutine?.name) { Alert.alert('Error', 'Name is required.'); return; }
     try {
       const rId = editingRoutine.id || Math.random().toString(36).substring(2, 15);
@@ -182,29 +221,12 @@ export const ArchitectZone = () => {
   };
 
   const openExercisePicker = (callback: (id: string, name: string) => void) => {
-    const res = DB.getAll<any>(`
-      SELECT e.*, 
-             (SELECT muscle_group FROM Exercise_Muscle_Groups WHERE exercise_id = e.id AND is_primary = 1 LIMIT 1) as primary_muscle,
-             (SELECT GROUP_CONCAT(muscle_group) FROM Exercise_Muscle_Groups WHERE exercise_id = e.id) as all_muscles
-      FROM Exercises e 
-      ORDER BY e.name ASC;
-    `);
-    
-    const formatted: ExerciseWithMuscle[] = res.map(ex => ({
-      ...ex,
-      muscle_group: ex.primary_muscle || MuscleGroup.CHEST,
-      muscle_groups: ex.all_muscles ? ex.all_muscles.split(',') : []
-    }));
-    
-    setExercises(formatted);
     setPickerType('exercise');
     setCurrentPickerCallback(() => callback);
     setPickerVisible(true);
   };
 
   const openDayPicker = (callback: (id: string, name: string) => void) => {
-    const res = DB.getAll<Workout>('SELECT * FROM Workouts ORDER BY name ASC;');
-    setDays(res);
     setPickerType('day');
     setCurrentPickerCallback(() => callback);
     setPickerVisible(true);
@@ -253,13 +275,7 @@ export const ArchitectZone = () => {
             </View>
           </View>
           <View className="flex-row">
-            <TouchableOpacity onPress={async () => {
-              const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [item.id]);
-              let workout_mappings: (string | null)[] = item.mode === RoutineMode.WEEKLY ? Array(7).fill(null) : mappings.map((m: any) => m.workout_id);
-              if (item.mode === RoutineMode.WEEKLY) mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
-              setEditingRoutine({ ...item, workout_mappings });
-              setRoutineModalVisible(true);
-            }} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleEditRoutine(item)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-accent font-black text-[10px] uppercase tracking-widest">Del</Text></TouchableOpacity>
             <TouchableOpacity onPress={async () => {
               const newId = isActive ? null : item.id;
@@ -318,30 +334,8 @@ export const ArchitectZone = () => {
               </View>
             </View>
             <View className="flex-row">
-                <TouchableOpacity onPress={async () => {
-                if (activeSubTab === 'exercises') { setEditingExercise(item); setExerciseModalVisible(true); }
-                else if (activeSubTab === 'days') {
-                    const exResult = DB.getAll<any>('SELECT we.*, e.name FROM Workout_Exercises we JOIN Exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.order_index ASC;', [item.id]);
-                    setEditingDay({ 
-                      id: item.id, 
-                      name: item.name, 
-                      exercises: exResult.map((we: any) => ({ 
-                        id: we.id, 
-                        exercise_id: we.exercise_id, 
-                        name: we.name, 
-                        target_sets: we.target_sets, 
-                        target_reps: we.target_reps,
-                        target_weight: we.target_weight,
-                        rest_period_override: we.rest_period_override
-                      })) 
-                    });
-                    setDayModalVisible(true);
-                }
-                }} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                    if (activeSubTab === 'exercises') handleDeleteExercise(item.id);
-                    else if (activeSubTab === 'days') handleDeleteDay(item.id);
-                }} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-accent font-black text-[10px] uppercase tracking-widest">Del</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => handleEditItem(item)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2"><Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => activeSubTab === 'exercises' ? handleDeleteExercise(item.id) : handleDeleteDay(item.id)} className="bg-background p-3 rounded-2xl border border-border shadow-sm"><Text className="text-accent font-black text-[10px] uppercase tracking-widest">Del</Text></TouchableOpacity>
             </View>
           </View>
         )}
@@ -374,10 +368,9 @@ export const ArchitectZone = () => {
                     const selectedMuscles = editingExercise?.muscle_groups || (editingExercise?.muscle_group ? [editingExercise.muscle_group] : []);
                     const isSelected = selectedMuscles.includes(mg);
                     const primaryIndex = selectedMuscles.indexOf(mg);
-                    
                     return (
-                      <TouchableOpacity 
-                        key={mg} 
+                      <TouchableOpacity
+                        key={mg}
                         onPress={() => {
                           let nextMuscles = [...selectedMuscles];
                           if (isSelected) {
@@ -385,12 +378,12 @@ export const ArchitectZone = () => {
                           } else {
                             nextMuscles.push(mg);
                           }
-                          setEditingExercise({ 
-                            ...editingExercise!, 
+                          setEditingExercise({
+                            ...editingExercise!,
                             muscle_groups: nextMuscles,
-                            muscle_group: nextMuscles[0] || MuscleGroup.CHEST 
+                            muscle_group: nextMuscles[0] || MuscleGroup.CHEST
                           });
-                        }} 
+                        }}
                         className={`px-3 py-1.5 m-1 rounded-lg border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
                       >
                         <View className="flex-row items-center">
@@ -453,18 +446,18 @@ export const ArchitectZone = () => {
                     </View>
                     <View className="flex-row space-x-2 mb-3">
                       <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Sets</Text>
-                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_sets = parseInt(v) || 0; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_sets.toString()} onChangeText={(v) => updateDayExercise(idx, 'target_sets', parseInt(v) || 0)} />
                       </View>
                       <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Reps</Text>
-                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_reps?.toString() || ''} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_reps = parseInt(v) || null; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_reps?.toString() || ''} onChangeText={(v) => updateDayExercise(idx, 'target_reps', parseInt(v) || null)} />
                       </View>
                       <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Weight</Text>
-                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_weight?.toString() || ''} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].target_weight = parseFloat(v) || null; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.target_weight?.toString() || ''} onChangeText={(v) => updateDayExercise(idx, 'target_weight', parseFloat(v) || null)} />
                       </View>
                     </View>
                     <View className="flex-row">
                       <View className="flex-1"><Text className="text-[10px] font-black text-text-muted uppercase mb-1">Rest Override (s)</Text>
-                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.rest_period_override?.toString() || ''} onChangeText={(v) => { const newExs = [...editingDay.exercises]; newExs[idx].rest_period_override = parseInt(v) || null; setEditingDay({ ...editingDay, exercises: newExs }); }} />
+                        <TextInput className="bg-surface border border-border rounded-xl p-3 text-center font-bold text-text-main" keyboardType="numeric" value={ex.rest_period_override?.toString() || ''} onChangeText={(v) => updateDayExercise(idx, 'rest_period_override', parseInt(v) || null)} />
                       </View>
                       <View className="flex-[2]" />
                     </View>

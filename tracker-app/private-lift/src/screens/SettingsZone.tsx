@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Touchable, TouchableOpacity } from 'react-native';
 import { DB } from '../database/db';
 import { UserSettings, Routine } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
@@ -13,14 +13,18 @@ export const SettingsZone = () => {
   // Local state for inputs to prevent lag while typing
   const [localName, setLocalName] = useState(contextSettings?.user_name || '');
   const [localRest, setLocalRest] = useState((contextSettings?.default_rest_duration ?? 60).toString());
+  const [localToken, setLocalToken] = useState(contextSettings?.vault_connection_token || '');
+  const [localHistoryLimit, setLocalHistoryLimit] = useState((contextSettings?.sync_history_limit_months ?? 6).toString());
 
   // Keep local state in sync when context settings change externally
   useEffect(() => {
     if (contextSettings) {
       setLocalName(contextSettings.user_name || '');
       setLocalRest((contextSettings.default_rest_duration ?? 60).toString());
+      setLocalToken(contextSettings.vault_connection_token || '');
+      setLocalHistoryLimit((contextSettings.sync_history_limit_months ?? 6).toString());
     }
-  }, [contextSettings?.user_name, contextSettings?.default_rest_duration]);
+  }, [contextSettings?.user_name, contextSettings?.default_rest_duration, contextSettings?.vault_connection_token, contextSettings?.sync_history_limit_months]);
 
   // Load routine only when activeRoutineId changes
   useEffect(() => {
@@ -73,9 +77,9 @@ export const SettingsZone = () => {
         <View className="bg-surface rounded-[32px] p-6 mb-6 shadow-sm border border-border">
           <View className="flex-row justify-between items-start mb-4">
             <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Current Directive</Text>
-            <TouchableOpacity onPress={() => setRoutineSelectorVisible(true)}>
+            <Pressable onPress={() => setRoutineSelectorVisible(true)}>
               <Text className="text-[10px] font-black text-primary uppercase tracking-widest">{activeRoutine ? 'Change' : 'Set Plan'}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           
           {activeRoutine ? (
@@ -168,8 +172,9 @@ export const SettingsZone = () => {
             <TextInput
               className="bg-background border border-border rounded-xl px-4 py-2 w-20 text-center font-black text-text-main"
               keyboardType="numeric"
-              value={contextSettings.sync_history_limit_months?.toString()}
-              onChangeText={(v) => wrapUpdate({ sync_history_limit_months: parseInt(v) || 0 })}
+              value={localHistoryLimit}
+              onChangeText={setLocalHistoryLimit}
+              onBlur={() => wrapUpdate({ sync_history_limit_months: parseInt(localHistoryLimit) || 0 })}
             />
           </View>
 
@@ -245,8 +250,11 @@ export const SettingsZone = () => {
               placeholder="Enter vault token..."
               placeholderTextColor="var(--color-text-muted)"
               secureTextEntry
-              value={contextSettings.vault_connection_token || ''}
-              onChangeText={(v) => wrapUpdate({ vault_connection_token: v })}
+              value={localToken}
+              onChangeText={setLocalToken}
+              onBlur={() => wrapUpdate({ vault_connection_token: localToken })}
+              returnKeyType="done"
+              onSubmitEditing={() => wrapUpdate({ vault_connection_token: localToken })}
             />
           </View>
         </View>
@@ -255,18 +263,18 @@ export const SettingsZone = () => {
         <View className="bg-text-main rounded-[32px] p-8 mb-20">
           <Text className="text-background text-lg font-black mb-2 tracking-tight">Data Sovereignty</Text>
           <Text className="text-text-muted text-xs mb-8">All training data is stored locally. Exporting generates an AES-256 encrypted JSON vault.</Text>
-          <TouchableOpacity onPress={handleExport} className="bg-surface/10 py-4 rounded-2xl items-center border border-surface/10">
+          <Pressable onPress={handleExport} className="bg-surface/10 py-4 rounded-2xl items-center border border-surface/10">
             <Text className="text-surface font-black text-xs uppercase tracking-widest">Generate Export</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
 
       <Modal visible={routineSelectorVisible} animationType="slide" presentationStyle="pageSheet">
         <View className="flex-1 bg-background pt-4">
           <View className="flex-row justify-end px-6">
-            <TouchableOpacity onPress={() => setRoutineSelectorVisible(false)} className="bg-primary-soft px-4 py-2 rounded-full">
+            <Pressable onPress={() => setRoutineSelectorVisible(false)} className="bg-primary-soft px-4 py-2 rounded-full">
               <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <RoutineSelector onClose={() => setRoutineSelectorVisible(false)} />
         </View>

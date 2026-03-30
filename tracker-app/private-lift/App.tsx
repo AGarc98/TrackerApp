@@ -36,13 +36,12 @@ function AppContent() {
   const themeClass = settings?.theme === 'light' ? 'theme-light' : settings?.theme === 'dark' ? 'theme-dark' : 'theme-base';
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className={`flex-1 ${themeClass} bg-background`}>
-        <View className="flex-1">
-          {renderContent()}
-        </View>
-        
-        <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
+    <SafeAreaView className={`flex-1 ${themeClass} bg-background`}>
+      <View className="flex-1">
+        {renderContent()}
+      </View>
+
+      <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
           <TouchableOpacity 
             onPress={() => setActiveTab('data')}
             className="flex-1 items-center"
@@ -77,8 +76,7 @@ function AppContent() {
             </View>
           </TouchableOpacity>
         </View>
-      </View>
-      
+
       <StatusBar style={settings?.theme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaView>
   );
