@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useWorkout } from '../store/WorkoutContext';
