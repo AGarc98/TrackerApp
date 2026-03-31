@@ -148,7 +148,7 @@ export const DataZone = () => {
                             onPress={() => setSelectedWeeks(w)}
                             disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
-                                selectedWeeks === w ? 'bg-background shadow-sm' : ''
+                                selectedWeeks === w ? 'bg-background' : ''
                             }`}
                         >
                             <Text className={`font-black text-xs ${
@@ -168,7 +168,7 @@ export const DataZone = () => {
                             onPress={() => setSelectedMetric('VOLUME')}
                             disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
-                                selectedMetric === 'VOLUME' ? 'bg-background shadow-sm' : ''
+                                selectedMetric === 'VOLUME' ? 'bg-background' : ''
                             }`}
                         >
                             <Text className={`font-black text-xs ${
@@ -179,7 +179,7 @@ export const DataZone = () => {
                             onPress={() => setSelectedMetric('INTENSITY')}
                             disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
-                                selectedMetric === 'INTENSITY' ? 'bg-background shadow-sm' : ''
+                                selectedMetric === 'INTENSITY' ? 'bg-background' : ''
                             }`}
                         >
                             <Text className={`font-black text-xs ${
@@ -193,7 +193,7 @@ export const DataZone = () => {
                             onPress={() => setSelectedMetric('DISTANCE')}
                             disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
-                                selectedMetric === 'DISTANCE' ? 'bg-background shadow-sm' : ''
+                                selectedMetric === 'DISTANCE' ? 'bg-background' : ''
                             }`}
                         >
                             <Text className={`font-black text-xs ${
@@ -204,7 +204,7 @@ export const DataZone = () => {
                             onPress={() => setSelectedMetric('TIME')}
                             disabled={isLoading}
                             className={`px-4 py-1.5 rounded-lg ${
-                                selectedMetric === 'TIME' ? 'bg-background shadow-sm' : ''
+                                selectedMetric === 'TIME' ? 'bg-background' : ''
                             }`}
                         >
                             <Text className={`font-black text-xs ${

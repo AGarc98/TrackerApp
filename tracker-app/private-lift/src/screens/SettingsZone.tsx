@@ -132,7 +132,7 @@ export const SettingsZone = () => {
                 <TouchableOpacity 
                   key={t}
                   onPress={() => wrapUpdate({ theme: t })} 
-                  className={`flex-1 py-3 rounded-xl items-center ${contextSettings.theme === t ? 'bg-surface shadow-sm border border-border' : ''}`}
+                  className={`flex-1 py-3 rounded-xl items-center ${contextSettings.theme === t ? 'bg-surface border border-border' : ''}`}
                 >
                   <Text className={`text-[10px] font-black uppercase tracking-widest ${contextSettings.theme === t ? 'text-primary' : 'text-text-muted'}`}>
                     {t}
@@ -145,16 +145,16 @@ export const SettingsZone = () => {
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-text-main">Weight Unit</Text><Text className="text-xs text-text-muted">Global standard</Text></View>
             <View className="flex-row bg-background p-1 rounded-xl">
-              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'KG' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'LBS' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'KG' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'KG' ? 'bg-surface' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'KG' ? 'text-primary' : 'text-text-muted'}`}>KG</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ weight_unit: 'LBS' })} className={`px-4 py-2 rounded-lg ${contextSettings.weight_unit === 'LBS' ? 'bg-surface' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.weight_unit === 'LBS' ? 'text-primary' : 'text-text-muted'}`}>LBS</Text></TouchableOpacity>
             </View>
           </View>
 
           <View className="flex-row justify-between items-center mb-6">
             <View><Text className="text-base font-bold text-text-main">Distance Unit</Text><Text className="text-xs text-text-muted">Movement standard</Text></View>
             <View className="flex-row bg-background p-1 rounded-xl">
-              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'KM' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'KM' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'KM' ? 'text-primary' : 'text-text-muted'}`}>KM</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'MILES' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'MILES' ? 'bg-surface shadow-sm' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'MILES' ? 'text-primary' : 'text-text-muted'}`}>MI</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'KM' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'KM' ? 'bg-surface' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'KM' ? 'text-primary' : 'text-text-muted'}`}>KM</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => wrapUpdate({ distance_unit: 'MILES' })} className={`px-4 py-2 rounded-lg ${contextSettings.distance_unit === 'MILES' ? 'bg-surface' : ''}`}><Text className={`text-[10px] font-black ${contextSettings.distance_unit === 'MILES' ? 'text-primary' : 'text-text-muted'}`}>MI</Text></TouchableOpacity>
             </View>
           </View>
 
