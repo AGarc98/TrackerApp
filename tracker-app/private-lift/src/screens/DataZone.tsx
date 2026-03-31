@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Modal } from 'react-native';
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useWorkout } from '../store/WorkoutContext';
@@ -17,8 +17,31 @@ export const DataZone = () => {
   const [selectedWeeks, setSelectedWeeks] = useState(8);
   const [selectedMetric, setSelectedMetric] = useState<Metric>('VOLUME');
   const { data, comparison, isLoading } = useAnalytics(selectedMuscle, selectedWeeks);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportCSV, setExportCSV] = useState('');
 
   const isEnduranceFocus = useMemo(() => ENDURANCE_MUSCLES.includes(selectedMuscle), [selectedMuscle]);
+
+  const handleExportCSV = useCallback(() => {
+    if (data.length === 0) {
+      Alert.alert('No Data', 'There is no data for this muscle group and timeframe yet.');
+      return;
+    }
+    const weightUnit = settings?.weight_unit || 'KG';
+    const header = `Week,Volume (${weightUnit}),Intensity (${weightUnit}),Distance (KM),Time (min),Frequency`;
+    const rows = data.map(p =>
+      [
+        p.weekStart,
+        p.volume.toFixed(1),
+        p.intensity.toFixed(1),
+        p.distance.toFixed(2),
+        (p.time_ms / (1000 * 60)).toFixed(1),
+        p.frequency,
+      ].join(',')
+    );
+    setExportCSV([header, ...rows].join('\n'));
+    setExportModalVisible(true);
+  }, [data, settings?.weight_unit]);
 
   const handleMuscleSelect = useCallback((mg: MuscleGroup) => {
     setSelectedMuscle(mg);
@@ -101,7 +124,16 @@ export const DataZone = () => {
             </View>
             <Text className="text-2xl font-black text-text-main tracking-tighter">Analytics</Text>
           </View>
-          {isLoading && <ActivityIndicator size="small" color="#8B5CF6" />}
+          <View className="flex-row items-center space-x-3">
+            {isLoading && <ActivityIndicator size="small" color="#8B5CF6" />}
+            <TouchableOpacity
+              onPress={handleExportCSV}
+              activeOpacity={0.8}
+              className="bg-surface px-4 py-3 rounded-2xl border border-border shadow-sm"
+            >
+              <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Export CSV</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -304,6 +336,27 @@ export const DataZone = () => {
             </View>
         </View>
       </ScrollView>
+      {/* ─── Export CSV Modal ─────────────────────────────────────────────── */}
+      <Modal visible={exportModalVisible} animationType="slide" transparent statusBarTranslucent>
+        <View className="flex-1 justify-end bg-black/60">
+          <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[75%]">
+            <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
+            <Text className="text-2xl font-black text-text-main mb-1">Export CSV</Text>
+            <Text className="text-text-muted text-xs font-medium mb-6 leading-5">
+              {`${selectedMuscle.replace(/_/g, ' ')} · last ${selectedWeeks} weeks. Copy and paste into any spreadsheet app.`}
+            </Text>
+            <ScrollView className="flex-1 bg-background rounded-2xl p-4 border border-border mb-6">
+              <Text selectable className="text-text-muted font-mono text-xs leading-5">{exportCSV}</Text>
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setExportModalVisible(false)}
+              className="bg-primary py-5 rounded-2xl"
+            >
+              <Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
