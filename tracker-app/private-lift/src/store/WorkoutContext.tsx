@@ -12,7 +12,7 @@ interface WorkoutContextType {
   startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[], routineId?: string | null) => Promise<void>;
   logSet: (exerciseId: string, sets: SetData[]) => Promise<void>;
   swapExercise: (oldExerciseId: string, newExerciseId: string) => Promise<void>;
-  finishWorkout: () => Promise<void>;
+  finishWorkout: (rpe?: number) => Promise<void>;
   discardWorkout: () => Promise<void>;
   resumeWorkout: () => Promise<void>;
   setActiveRoutine: (routineId: string | null, duration?: number, startDayIndex?: number) => Promise<void>;
@@ -22,7 +22,7 @@ interface WorkoutContextType {
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
 // Robust ID generation for local environment
-const generateId = () => {
+export const generateId = () => {
   const S4 = () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
   return `${S4()}${S4()}-${S4()}-${S4()}-${S4()}-${S4()}${S4()}${S4()}`;
 };
@@ -128,17 +128,38 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const startTime = Date.now();
       const lastModified = startTime;
 
+      // Load previous logged sets for this workout to pre-fill inputs
+      const lastSession = DB.getOne<{ id: string }>(
+        'SELECT id FROM Logged_Sessions WHERE workout_id = ? ORDER BY end_time DESC LIMIT 1;',
+        [workout.id]
+      );
+      const lastSetsMap: Record<string, { weight: number | null; reps: number | null; time_ms: number | null; distance: number | null }[]> = {};
+      if (lastSession) {
+        const allLastSets = DB.getAll<{ exercise_id: string; weight: number | null; reps: number | null; time_ms: number | null; distance: number | null; order_index: number }>(
+          'SELECT exercise_id, weight, reps, time_ms, distance, order_index FROM Logged_Sets WHERE session_id = ? ORDER BY exercise_id, order_index ASC;',
+          [lastSession.id]
+        );
+        allLastSets.forEach(s => {
+          if (!lastSetsMap[s.exercise_id]) lastSetsMap[s.exercise_id] = [];
+          lastSetsMap[s.exercise_id].push(s);
+        });
+      }
+
       const initialDrafts: Record<string, SetData[]> = {};
       exercises.forEach(ex => {
-        initialDrafts[ex.exercise.id] = Array.from({ length: ex.target_sets }, () => ({
-          id: generateId().substring(0, 8),
-          is_skipped: false,
-          is_completed: false,
-          reps: ex.target_reps || undefined,
-          weight: ex.target_weight || undefined,
-          time_ms: ex.target_time_ms || undefined,
-          distance: ex.target_distance || undefined
-        }));
+        const prevSets = lastSetsMap[ex.exercise.id] || [];
+        initialDrafts[ex.exercise.id] = Array.from({ length: ex.target_sets }, (_, i) => {
+          const prev = prevSets[i] ?? prevSets[prevSets.length - 1];
+          return {
+            id: generateId().substring(0, 8),
+            is_skipped: false,
+            is_completed: false,
+            reps: prev?.reps ?? ex.target_reps ?? undefined,
+            weight: prev?.weight ?? ex.target_weight ?? undefined,
+            time_ms: prev?.time_ms ?? ex.target_time_ms ?? undefined,
+            distance: prev?.distance ?? ex.target_distance ?? undefined,
+          };
+        });
       });
 
       const draftData = JSON.stringify(initialDrafts);
@@ -168,7 +189,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     } catch (error) {
       console.error('Failed to start workout:', error);
-      Alert.alert('Error', 'Failed to start workout.');
+      Alert.alert('Error', 'Could not start the workout. Please try again.');
     }
   };
 
@@ -201,9 +222,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         is_completed: false, // Reset completion but keep weight/reps
       }));
 
-      const newDraftSets = { ...draftSets };
-      delete newDraftSets[oldExerciseId];
-      newDraftSets[newExerciseId] = newSets;
+      const newDraftSets: Record<string, SetData[]> = {};
+      Object.entries(draftSets).forEach(([key, value]) => {
+        newDraftSets[key === oldExerciseId ? newExerciseId : key] =
+          key === oldExerciseId ? newSets : value;
+      });
       const draftData = JSON.stringify(newDraftSets);
 
       DB.transaction(() => {
@@ -220,7 +243,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const finishWorkout = async () => {
+  const finishWorkout = async (rpe?: number) => {
     if (!activeSession) return;
 
     try {
@@ -228,8 +251,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const lastModified = endTime;
       DB.transaction(() => {
         DB.run(
-          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
-          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, activeSession.is_swapped, lastModified]
+          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, rpe, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, rpe ?? null, activeSession.is_swapped, lastModified]
         );
 
         Object.entries(draftSets).forEach(([exerciseId, sets]) => {
@@ -270,19 +293,19 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setActiveSession(null);
       setDraftSets({});
-      Alert.alert('Success', 'Workout vault updated.');
+      Alert.alert('Saved!', 'Your session has been logged.');
     } catch (error) {
       console.error('Failed to finish workout:', error);
-      Alert.alert('Error', 'Atomic commit failed.');
+      Alert.alert('Error', 'Failed to save your workout. Please try again.');
     }
   };
 
   const discardWorkout = async () => {
     if (!activeSession) return;
-    Alert.alert('Discard Session', 'This will purge all unsaved draft data. Proceed?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Cancel Workout?', 'All progress will be lost.', [
+      { text: 'Keep Going', style: 'cancel' },
       {
-        text: 'Discard',
+        text: 'Yes, Cancel',
         style: 'destructive',
         onPress: () => {
           try {

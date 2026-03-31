@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
-import { useWorkout } from '../store/WorkoutContext';
+import { useWorkout, generateId } from '../store/WorkoutContext';
 import { DB } from '../database/db';
 import { Workout, SetData, Routine, RoutineMode, ExerciseWithMuscle, ExerciseType } from '../types/database';
 import { SettingsZone } from './SettingsZone';
@@ -58,7 +58,7 @@ const Header = memo(({ showActivePill, onSettingsPress }: { showActivePill?: boo
           activeOpacity={0.7}
           className="bg-surface p-3 rounded-2xl shadow-sm border border-border"
         >
-          <Text className="text-[10px] font-black text-text-muted uppercase tracking-[2px]">Vault</Text>
+          <Text className="text-[10px] font-black text-text-muted uppercase tracking-[2px]">Settings</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -134,17 +134,6 @@ const SetRow = memo(({
               <View className="flex-1">
                 <TextInput
                   className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-                  placeholder={unit}
-                  placeholderTextColor="var(--color-text-muted)"
-                  keyboardType="numeric"
-                  value={localWeight}
-                  onChangeText={setLocalWeight}
-                  onBlur={() => onUpdate({ weight: parseFloat(localWeight) || undefined })}
-                />
-              </View>
-              <View className="flex-1">
-                <TextInput
-                  className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
                   placeholder="REPS"
                   placeholderTextColor="var(--color-text-muted)"
                   keyboardType="numeric"
@@ -152,6 +141,22 @@ const SetRow = memo(({
                   onChangeText={setLocalReps}
                   onBlur={() => onUpdate({ reps: parseInt(localReps) || undefined })}
                 />
+              </View>
+              <View className="flex-1">
+                <View className="relative">
+                  <TextInput
+                    className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg pr-10"
+                    placeholder="0"
+                    placeholderTextColor="var(--color-text-muted)"
+                    keyboardType="numeric"
+                    value={localWeight}
+                    onChangeText={setLocalWeight}
+                    onBlur={() => onUpdate({ weight: parseFloat(localWeight) || undefined })}
+                  />
+                  <View className="absolute right-3 top-0 bottom-0 justify-center pointer-events-none">
+                    <Text className="text-[9px] font-black text-text-muted uppercase tracking-widest">{unit}</Text>
+                  </View>
+                </View>
               </View>
             </>
           )}
@@ -164,26 +169,28 @@ const SetRow = memo(({
             set.is_completed ? 'bg-success shadow-success/20' : 'bg-surface border border-border'
           }`}
         >
-          <Text className="text-surface text-2xl font-black">{set.is_completed ? '✓' : ''}</Text>
+          <Text className={`text-2xl font-black ${set.is_completed ? 'text-surface' : 'text-text-muted/25'}`}>✓</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 });
 
-const ExerciseItem = memo(({ 
-  exerciseId, 
-  exercise, 
-  sets, 
-  onUpdateSet, 
-  onSwap, 
-  unit 
-}: { 
-  exerciseId: string, 
-  exercise?: ExerciseWithMuscle, 
-  sets: SetData[], 
+const ExerciseItem = memo(({
+  exerciseId,
+  exercise,
+  sets,
+  onUpdateSet,
+  onSwap,
+  onAddSet,
+  unit
+}: {
+  exerciseId: string,
+  exercise?: ExerciseWithMuscle,
+  sets: SetData[],
   onUpdateSet: (exerciseId: string, index: number, updates: Partial<SetData>) => void,
   onSwap: (exerciseId: string) => void,
+  onAddSet: (exerciseId: string) => void,
   unit: string
 }) => (
   <View className="bg-surface rounded-[40px] p-8 mb-6 shadow-sm border border-border">
@@ -206,22 +213,30 @@ const ExerciseItem = memo(({
         <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap</Text>
       </TouchableOpacity>
     </View>
-    
+
     {sets.map((set, index) => (
-      <SetRow 
-        key={set.id} 
-        set={set} 
-        index={index} 
-        unit={unit} 
+      <SetRow
+        key={set.id}
+        set={set}
+        index={index}
+        unit={unit}
         exerciseType={exercise?.type}
-        onUpdate={(updates) => onUpdateSet(exerciseId, index, updates)} 
+        onUpdate={(updates) => onUpdateSet(exerciseId, index, updates)}
       />
     ))}
+
+    <TouchableOpacity
+      onPress={() => onAddSet(exerciseId)}
+      activeOpacity={0.6}
+      className="mt-2 py-3 items-center"
+    >
+      <Text className="text-[10px] font-black text-text-muted/50 uppercase tracking-widest">+ Add Set</Text>
+    </TouchableOpacity>
   </View>
 ));
 
 export const AthleteZone = () => {
-  const { activeSession, activeRoutineId, draftSets, logSet, startWorkout, finishWorkout, discardWorkout, swapExercise, settings, resumeWorkout } = useWorkout();
+  const { activeSession, activeRoutineId, draftSets, logSet, startWorkout, finishWorkout, discardWorkout, swapExercise, settings, resumeWorkout, isLoading } = useWorkout();
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   const [exercises, setExercises] = useState<ExerciseWithMuscle[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
@@ -232,25 +247,28 @@ export const AthleteZone = () => {
   const [exerciseToSwap, setExerciseToSwap] = useState<string | null>(null);
   const { timeLeft, isActive: isTimerActive, startTimer, stopTimer } = useRestTimer();
   const [routineProgress, setRoutineProgress] = useState({ completed: 0, total: 0 });
+  const [rpeModalVisible, setRpeModalVisible] = useState(false);
   const [hasCheckedResume, setHasCheckedResume] = useState(false);
+  const [workoutName, setWorkoutName] = useState('');
 
   useEffect(() => {
     loadInitialData();
   }, [activeRoutineId, activeSession]);
 
   useEffect(() => {
-    if (!hasCheckedResume && activeSession) {
+    if (isLoading || hasCheckedResume) return;
+    setHasCheckedResume(true);
+    if (activeSession) {
       Alert.alert(
-        'Incomplete Session',
-        'An active session was found from your last deployment. Resume training?',
+        'Resume Workout?',
+        'You have an unfinished session. What would you like to do?',
         [
-          { text: 'Discard', style: 'destructive', onPress: () => discardWorkout() },
-          { text: 'Resume', onPress: () => setHasCheckedResume(true) }
+          { text: 'Discard Session', style: 'destructive', onPress: () => discardWorkout() },
+          { text: 'Resume', onPress: () => {} }
         ]
       );
-      setHasCheckedResume(true);
     }
-  }, [activeSession, hasCheckedResume]);
+  }, [isLoading]);
 
   const exercisesById = useMemo(() => new Map(exercises.map(e => [e.id, e])), [exercises]);
 
@@ -264,6 +282,13 @@ export const AthleteZone = () => {
       LEFT JOIN Exercise_Muscle_Groups emg ON e.id = emg.exercise_id AND emg.is_primary = 1;
     `);
     setExercises(allExercises);
+
+    if (activeSession?.workout_id) {
+      const w = DB.getOne<{ name: string }>('SELECT name FROM Workouts WHERE id = ?;', [activeSession.workout_id]);
+      setWorkoutName(w?.name || '');
+    } else {
+      setWorkoutName('');
+    }
 
     if (activeRoutineId) {
       const routine = DB.getOne<Routine>('SELECT * FROM Routines WHERE id = ?;', [activeRoutineId]);
@@ -299,11 +324,11 @@ export const AthleteZone = () => {
         
         if (!mapping || !mapping.workout_id) {
           Alert.alert(
-            'Recovery Protocol',
-            'Today is scheduled as a Rest Day in your blueprint. Would you like to select a different workout?',
+            'Rest Day',
+            'Today is a rest day in your plan. Train anyway?',
             [
               { text: 'Rest', style: 'cancel' },
-              { text: 'Select', onPress: () => setWorkoutSelectorVisible(true) }
+              { text: 'Train Anyway', onPress: () => setWorkoutSelectorVisible(true) }
             ]
           );
           return;
@@ -320,11 +345,11 @@ export const AthleteZone = () => {
           if (!nextMapping.workout_id) {
             // Handle Rest Day in ASYNC (if any)
             Alert.alert(
-              'Recovery Protocol',
-              'Next in sequence is a Rest Day. Bypass?',
+              'Rest Day',
+              'Next in your routine is a rest day. Skip it?',
               [
                 { text: 'Rest', style: 'cancel' },
-                { text: 'Bypass', onPress: () => setWorkoutSelectorVisible(true) }
+                { text: 'Skip It', onPress: () => setWorkoutSelectorVisible(true) }
               ]
             );
             return;
@@ -338,18 +363,40 @@ export const AthleteZone = () => {
       }
     }
 
-    if (!targetWorkout || workoutExercises.length === 0) {
-      targetWorkout = availableWorkouts[0];
-      if (!targetWorkout) {
-        Alert.alert('Vault Empty', 'Architect some workouts and routines first.');
+    if (!targetWorkout) {
+      if (availableWorkouts.length === 0) {
+        Alert.alert('Nothing Here', 'Add some workouts in the Vault first.');
         return;
       }
-      workoutExercises = loadWorkoutExercises(targetWorkout.id);
+      setWorkoutSelectorVisible(true);
+      return;
     }
 
     if (workoutExercises.length === 0) {
-      Alert.alert('Empty Workout', 'This workout has no exercises assigned.');
+      Alert.alert('Empty Workout', 'Add exercises to this workout before starting.');
       return;
+    }
+
+    // For ASYNC routines, warn if a session was already logged today
+    if (activeRoutineId && activeRoutine?.mode === RoutineMode.ASYNC) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayCount = DB.getOne<{ count: number }>(
+        'SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ? AND start_time >= ?;',
+        [activeRoutineId, todayStart.getTime()]
+      )?.count || 0;
+
+      if (todayCount > 0) {
+        Alert.alert(
+          'Already Trained Today',
+          "You've already logged a session today. Start another workout anyway?",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Start Anyway', onPress: () => startWorkout(targetWorkout!, workoutExercises, activeRoutineId) }
+          ]
+        );
+        return;
+      }
     }
 
     await startWorkout(targetWorkout, workoutExercises, activeRoutineId);
@@ -378,6 +425,21 @@ export const AthleteZone = () => {
     setExerciseSelectorVisible(true);
   }, []);
 
+  const handleAddSet = useCallback((exerciseId: string) => {
+    const currentSets = draftSets[exerciseId] || [];
+    const lastSet = currentSets[currentSets.length - 1];
+    const newSet: SetData = {
+      id: generateId().substring(0, 8),
+      is_skipped: false,
+      is_completed: false,
+      reps: lastSet?.reps,
+      weight: lastSet?.weight,
+      time_ms: lastSet?.time_ms,
+      distance: lastSet?.distance,
+    };
+    logSet(exerciseId, [...currentSets, newSet]);
+  }, [draftSets, logSet]);
+
   if (!activeSession || (!hasCheckedResume && Platform.OS !== 'web')) {
     return (
       <View className="flex-1 bg-background">
@@ -396,27 +458,27 @@ export const AthleteZone = () => {
           <View className="mx-6 bg-surface p-10 rounded-[50px] shadow-2xl shadow-text-main/5 items-center border border-border">
             <Text className="text-3xl font-black text-text-main mb-2 tracking-tighter text-center">Athlete Zone</Text>
             <Text className="text-text-muted font-medium text-center mb-10 leading-5">
-              Vault initialized. Prepared to execute next performance directive.
+              Ready when you are. Start your routine or pick a workout below.
             </Text>
             
             {activeRoutine ? (
               <View className="items-center mb-10 bg-background/50 w-full py-8 rounded-[40px] border border-border">
-                <Text className="text-primary font-black uppercase tracking-widest text-[10px] mb-2">Primary Blueprint</Text>
+                <Text className="text-primary font-black uppercase tracking-widest text-[10px] mb-2">Active Routine</Text>
                 <Text className="text-text-main font-black text-2xl mb-1">{activeRoutine.name}</Text>
-                <Text className="text-text-muted font-bold text-xs uppercase tracking-widest">Sequence: {activeRoutine.cycle_count} Cycles Complete</Text>
+                <Text className="text-text-muted font-bold text-xs uppercase tracking-widest">{activeRoutine.cycle_count} cycles completed</Text>
                 
                 <View className="flex-row space-x-3 mt-8">
                   <TouchableOpacity 
                     onPress={() => setRoutineSelectorVisible(true)}
                     className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
                   >
-                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Adjust Plan</Text>
+                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Change Routine</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     onPress={() => setWorkoutSelectorVisible(true)}
                     className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
                   >
-                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap Next</Text>
+                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Choose Workout</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -426,7 +488,7 @@ export const AthleteZone = () => {
                   onPress={() => setRoutineSelectorVisible(true)}
                   className="bg-primary px-10 py-5 rounded-[28px] shadow-xl shadow-primary/20"
                 >
-                  <Text className="text-surface font-black uppercase tracking-[3px] text-xs text-center">Load Training Blueprint</Text>
+                  <Text className="text-surface font-black uppercase tracking-[3px] text-xs text-center">Set Up a Routine</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -437,8 +499,8 @@ export const AthleteZone = () => {
                   <Text className="text-lg">🔋</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-accent font-black uppercase tracking-widest text-[10px] mb-0.5">Recovery Protocol</Text>
-                  <Text className="text-text-main font-bold text-xs">Rest day suggested before next cycle.</Text>
+                  <Text className="text-accent font-black uppercase tracking-widest text-[10px] mb-0.5">Rest Day</Text>
+                  <Text className="text-text-main font-bold text-xs">You've finished a full cycle — consider a rest day.</Text>
                 </View>
               </View>
             )}
@@ -449,7 +511,7 @@ export const AthleteZone = () => {
               className="bg-text-main w-full py-6 rounded-[32px] shadow-2xl shadow-text-main/20"
             >
               <Text className="text-background text-lg font-black text-center uppercase tracking-[4px]">
-                {activeRoutine ? 'Initiate Session' : 'Quick Start'}
+                Start Workout
               </Text>
             </TouchableOpacity>
           </View>
@@ -475,16 +537,14 @@ export const AthleteZone = () => {
                 <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
               </TouchableOpacity>
             </View>
-            {activeRoutineId && (
-              <WorkoutSelector
-                routineId={activeRoutineId}
-                onSelect={async (workout, exercises) => {
-                  setWorkoutSelectorVisible(false);
-                  await startWorkout(workout, exercises, activeRoutineId);
-                }}
-                onClose={() => setWorkoutSelectorVisible(false)}
-              />
-            )}
+            <WorkoutSelector
+              routineId={activeRoutineId}
+              onSelect={async (workout, exercises) => {
+                setWorkoutSelectorVisible(false);
+                await startWorkout(workout, exercises, activeRoutineId);
+              }}
+              onClose={() => setWorkoutSelectorVisible(false)}
+            />
           </View>
         </Modal>
 
@@ -492,7 +552,7 @@ export const AthleteZone = () => {
           <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
               <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
-                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
+                <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close</Text>
               </TouchableOpacity>
             </View>
             <SettingsZone />
@@ -511,15 +571,19 @@ export const AthleteZone = () => {
         className="flex-1"
       >
         <ScrollView className="flex-1 p-4 pt-4" showsVerticalScrollIndicator={false}>
-          <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-4 mb-4">Training Directive</Text>
+          <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-4 mb-1">Now Training</Text>
+          {workoutName ? (
+            <Text className="text-xl font-black text-text-main ml-4 mb-4 tracking-tighter">{workoutName}</Text>
+          ) : <View className="mb-4" />}
           {Object.entries(draftSets).map(([exerciseId, sets]) => (
-            <ExerciseItem 
+            <ExerciseItem
               key={exerciseId}
               exerciseId={exerciseId}
               exercise={exercises.find(e => e.id === exerciseId)}
               sets={sets}
               onUpdateSet={updateSet}
               onSwap={handleSwapTrigger}
+              onAddSet={handleAddSet}
               unit={settings?.weight_unit || 'KG'}
             />
           ))}
@@ -546,22 +610,59 @@ export const AthleteZone = () => {
           activeOpacity={0.7}
           className="flex-1 bg-background py-6 rounded-[28px] items-center border border-border"
         >
-          <Text className="text-text-muted font-black uppercase tracking-[2px] text-xs">Discard</Text>
+          <Text className="text-text-muted font-black uppercase tracking-[2px] text-xs">Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={finishWorkout}
+          onPress={() => setRpeModalVisible(true)}
           activeOpacity={0.8}
           className="flex-[2] bg-text-main py-6 rounded-[28px] items-center shadow-2xl shadow-text-main/20"
         >
-          <Text className="text-background font-black uppercase tracking-[4px] text-xs">Commit Session</Text>
+          <Text className="text-background font-black uppercase tracking-[4px] text-xs">Finish Workout</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={rpeModalVisible} animationType="fade" transparent>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-surface rounded-t-[40px] px-8 pt-8 pb-12">
+            <Text className="text-2xl font-black text-text-main tracking-tighter text-center mb-1">How intense was that?</Text>
+            <Text className="text-text-muted font-bold text-sm text-center mb-8">Rate the session  1 – 10</Text>
+            {([1,2,3,4,5,6,7,8,9,10] as const).reduce<number[][]>((rows, n, i) => {
+              if (i % 5 === 0) rows.push([]);
+              rows[rows.length - 1].push(n);
+              return rows;
+            }, []).map((row, rowIndex) => (
+              <View key={rowIndex} className="flex-row justify-center space-x-3 mb-3">
+                {row.map((n) => {
+                  const color = n <= 3 ? 'bg-success' : n <= 6 ? 'bg-accent' : n <= 9 ? 'bg-warning' : 'bg-error';
+                  return (
+                    <TouchableOpacity
+                      key={n}
+                      onPress={() => { finishWorkout(n); setRpeModalVisible(false); }}
+                      activeOpacity={0.75}
+                      className={`w-14 h-14 rounded-2xl items-center justify-center shadow-sm ${color}`}
+                    >
+                      <Text className="text-surface text-lg font-black">{n}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={() => { finishWorkout(undefined); setRpeModalVisible(false); }}
+              activeOpacity={0.6}
+              className="mt-6 py-3 items-center"
+            >
+              <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Skip</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={settingsVisible} animationType="slide" presentationStyle="pageSheet">
         <View className="flex-1 bg-background pt-4">
           <View className="flex-row justify-end px-6">
             <TouchableOpacity onPress={() => setSettingsVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
-              <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close Vault</Text>
+              <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Close</Text>
             </TouchableOpacity>
           </View>
           <SettingsZone />

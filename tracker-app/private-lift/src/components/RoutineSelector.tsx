@@ -143,29 +143,33 @@ export const RoutineSelector: React.FC<RoutineSelectorProps> = ({ onSelect, onCl
                         </View>
                       </View>
 
-                      <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Routine Start Day</Text>
-                      <View className="flex-row flex-wrap mb-6">
-                        {WEEK_DAYS.map((day, idx) => (
-                          <TouchableOpacity
-                            key={day}
-                            onPress={() => setSelectedStartDay(idx)}
-                            className={`mr-2 mb-2 px-4 py-2 rounded-xl border ${
-                              selectedStartDay === idx 
-                                ? 'bg-primary border-primary' 
-                                : 'bg-surface border-border'
-                            }`}
-                          >
-                            <Text className={`font-black text-[10px] uppercase tracking-widest ${
-                              selectedStartDay === idx ? 'text-surface' : 'text-text-muted'
-                            }`}>
-                              {day}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                      {item.mode === RoutineMode.WEEKLY && (
+                        <>
+                          <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Routine Start Day</Text>
+                          <View className="flex-row flex-wrap mb-6">
+                            {WEEK_DAYS.map((day, idx) => (
+                              <TouchableOpacity
+                                key={day}
+                                onPress={() => setSelectedStartDay(idx)}
+                                className={`mr-2 mb-2 px-4 py-2 rounded-xl border ${
+                                  selectedStartDay === idx
+                                    ? 'bg-primary border-primary'
+                                    : 'bg-surface border-border'
+                                }`}
+                              >
+                                <Text className={`font-black text-[10px] uppercase tracking-widest ${
+                                  selectedStartDay === idx ? 'text-surface' : 'text-text-muted'
+                                }`}>
+                                  {day}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </>
+                      )}
 
                       <TouchableOpacity
-                        onPress={() => handleSelect(item.id, parseInt(customDuration) || item.duration, selectedStartDay)}
+                        onPress={() => handleSelect(item.id, parseInt(customDuration) || item.duration, item.mode === RoutineMode.WEEKLY ? selectedStartDay : undefined)}
                         className="bg-primary w-full py-5 rounded-2xl justify-center items-center shadow-lg shadow-primary/20"
                       >
                         <Text className="text-surface font-black uppercase tracking-widest text-xs">

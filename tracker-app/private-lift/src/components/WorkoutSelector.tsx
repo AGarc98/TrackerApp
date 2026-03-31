@@ -4,7 +4,7 @@ import { DB } from '../database/db';
 import { Workout, Exercise } from '../types/database';
 
 interface WorkoutSelectorProps {
-  routineId: string;
+  routineId?: string | null;
   onSelect: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[]) => void;
   onClose: () => void;
 }
@@ -72,8 +72,8 @@ export const WorkoutSelector: React.FC<WorkoutSelectorProps> = ({ routineId, onS
   return (
     <View className="flex-1 bg-background">
       <View className="p-6 pt-10">
-        <Text className="text-2xl font-black text-text-main mb-2">Swap Workout</Text>
-        <Text className="text-text-muted font-medium mb-6">Select a different blueprint for this session.</Text>
+        <Text className="text-2xl font-black text-text-main mb-2">Select Workout</Text>
+        <Text className="text-text-muted font-medium mb-6">Choose a workout to start.</Text>
 
         <FlatList
           data={workouts}
