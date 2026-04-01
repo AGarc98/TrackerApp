@@ -1,22 +1,51 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { DB } from '../database/db';
 import { Routine, RoutineMode, Workout } from '../types/database';
 
 interface ScheduleViewProps {
   activeRoutine: Routine;
   completedSessionsCount: number;
+  refreshKey?: number;
 }
 
 const WEEK_DAYS_SHORT = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, completedSessionsCount }) => {
+// Returns the Monday-epoch-ms cycle key for a given date (WEEKLY mode)
+const getWeeklyCycleKey = (date: Date): string => {
+  const weekStart = new Date(date);
+  weekStart.setDate(date.getDate() - (date.getDay() + 6) % 7);
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart.getTime().toString();
+};
+
+// Returns the override workout id for a mapping in this cycle, or null
+const getOverride = (
+  overrides: { mapping_id: string; override_workout_id: string }[],
+  mappingId: string
+): string | null => overrides.find(o => o.mapping_id === mappingId)?.override_workout_id ?? null;
+
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, completedSessionsCount, refreshKey }) => {
   const schedule = useMemo(() => {
     const days = [];
     const now = new Date();
 
     const mappings = DB.getAll<any>('SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;', [activeRoutine.id]);
     const workouts = DB.getAll<Workout>('SELECT * FROM Workouts;');
+
+    // Load current-cycle overrides
+    let cycleKey: string;
+    if (activeRoutine.mode === RoutineMode.WEEKLY) {
+      cycleKey = getWeeklyCycleKey(now);
+    } else {
+      const cycleLength = mappings.length || 1;
+      const cycleIndex = Math.floor(completedSessionsCount / cycleLength);
+      cycleKey = cycleIndex.toString();
+    }
+    const overrides = DB.getAll<{ mapping_id: string; override_workout_id: string }>(
+      'SELECT mapping_id, override_workout_id FROM Routine_Cycle_Overrides WHERE routine_id = ? AND cycle_key = ?;',
+      [activeRoutine.id, cycleKey]
+    );
 
     // ASYNC: check if a session was already logged today for this routine
     let todayAlreadyLogged = false;
@@ -29,11 +58,35 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, compl
       );
     }
 
-    // ASYNC: whether we're sitting on a cycle boundary (last cycle just finished)
-    const isCycleBoundary = activeRoutine.mode === RoutineMode.ASYNC &&
-      mappings.length > 0 &&
-      completedSessionsCount > 0 &&
-      completedSessionsCount % mappings.length === 0;
+    const resolveWorkoutId = (mapping: any): string | null =>
+      getOverride(overrides, mapping.id) ?? mapping.workout_id ?? null;
+
+    // Build a forward-looking slot sequence for ASYNC mode.
+    // Inserts a rest-day slot whenever the cycle wraps, so projected rest days
+    // appear throughout the 7-day window, not just at the current boundary.
+    type AsyncSlot = { type: 'rest' } | { type: 'workout'; mapping: any };
+    const buildAsyncSequence = (fromCount: number, needed: number): AsyncSlot[] => {
+      const seq: AsyncSlot[] = [];
+      let count = fromCount;
+      // If we're already sitting at a cycle boundary, the first slot is a rest day
+      if (count > 0 && count % mappings.length === 0) {
+        seq.push({ type: 'rest' });
+      }
+      while (seq.length < needed) {
+        seq.push({ type: 'workout', mapping: mappings[count % mappings.length] });
+        count++;
+        // After completing a full cycle, insert the implied rest day
+        if (count % mappings.length === 0) {
+          seq.push({ type: 'rest' });
+        }
+      }
+      return seq;
+    };
+
+    // Pre-build enough slots to cover all 7 calendar days
+    const asyncSeq = activeRoutine.mode === RoutineMode.ASYNC && mappings.length > 0
+      ? buildAsyncSequence(completedSessionsCount, 9) // 9 gives headroom for rest day slots
+      : [];
 
     for (let i = 0; i < 7; i++) {
       const dayDate = new Date(now);
@@ -47,40 +100,45 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, compl
       if (activeRoutine.mode === RoutineMode.WEEKLY) {
         const shiftedDayIdx = (dayIdx - (activeRoutine.start_day_index || 0) + 7) % 7;
         const mapping = mappings.find((m: any) => m.day_of_week === shiftedDayIdx);
-        if (mapping && mapping.workout_id) {
-          const w = workouts.find(work => work.id === mapping.workout_id);
-          workoutName = w?.name || 'Workout';
-          isRest = false;
-        }
-      } else {
-        // ASYNC projection
-        // frontConsumed = how many days at the front are pre-occupied before the sequence projection starts:
-        // +1 if today is already logged (occupied by the done workout card)
-        // +1 if we're at a cycle boundary (occupied by the implied rest day)
-        const frontConsumed = (todayAlreadyLogged ? 1 : 0) + (isCycleBoundary ? 1 : 0);
-
-        if (i === 0 && todayAlreadyLogged) {
-          // Today: show the workout that was completed
-          const doneIdx = (completedSessionsCount - 1 + mappings.length) % mappings.length;
-          const m = mappings[doneIdx];
-          const w = workouts.find(wk => wk.id === m?.workout_id);
-          workoutName = w?.name || 'Rest Day';
-          isRest = !m?.workout_id;
-          isDone = true;
-        } else if (isCycleBoundary && i < frontConsumed) {
-          // Cycle rest day: slot i=0 when not logged today, slot i=1 when logged today
-          workoutName = 'Rest Day';
-          isRest = true;
-        } else {
-          // Normal sequence projection, shifted past the consumed front slots
-          const projOffset = i - frontConsumed;
-          const seqIdx = (completedSessionsCount + projOffset) % mappings.length;
-          const m = mappings[seqIdx];
-          if (m && m.workout_id) {
-            const w = workouts.find(wk => wk.id === m.workout_id);
+        if (mapping) {
+          const workoutId = resolveWorkoutId(mapping);
+          if (workoutId) {
+            const w = workouts.find(work => work.id === workoutId);
             workoutName = w?.name || 'Workout';
             isRest = false;
           }
+        }
+        const dayStart = new Date(dayDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        isDone = !!DB.getOne(
+          'SELECT id FROM Logged_Sessions WHERE routine_id = ? AND start_time >= ? AND start_time <= ? LIMIT 1;',
+          [activeRoutine.id, dayStart.getTime(), dayEnd.getTime()]
+        );
+      } else {
+        if (i === 0 && todayAlreadyLogged) {
+          // Today: show the completed workout
+          const doneIdx = (completedSessionsCount - 1 + mappings.length) % mappings.length;
+          const m = mappings[doneIdx];
+          const workoutId = m ? resolveWorkoutId(m) : null;
+          const w = workouts.find(wk => wk.id === workoutId);
+          workoutName = w?.name || 'Rest Day';
+          isRest = !workoutId;
+          isDone = true;
+        } else {
+          // For projected days: slot index accounts for today being consumed if logged
+          const slotIdx = todayAlreadyLogged ? i - 1 : i;
+          const slot = asyncSeq[slotIdx];
+          if (slot?.type === 'workout') {
+            const workoutId = resolveWorkoutId(slot.mapping);
+            if (workoutId) {
+              const w = workouts.find(wk => wk.id === workoutId);
+              workoutName = w?.name || 'Workout';
+              isRest = false;
+            }
+          }
+          // slot.type === 'rest' or missing → defaults to Rest Day (already set above)
         }
       }
 
@@ -94,13 +152,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, compl
       });
     }
     return days;
-  }, [activeRoutine, completedSessionsCount]);
+  }, [activeRoutine, completedSessionsCount, refreshKey]);
 
   return (
     <View className="mb-8">
       <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-6 mb-4">Deployment Schedule</Text>
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24 }}
       >

@@ -65,6 +65,18 @@ CREATE TABLE IF NOT EXISTS Routine_Workouts (
   FOREIGN KEY (workout_id) REFERENCES Workouts (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS Routine_Cycle_Overrides (
+  id TEXT PRIMARY KEY NOT NULL,
+  routine_id TEXT NOT NULL,
+  cycle_key TEXT NOT NULL, -- WEEKLY: Monday epoch ms of week start / ASYNC: cycle index
+  mapping_id TEXT NOT NULL,
+  override_workout_id TEXT NOT NULL,
+  last_modified INTEGER NOT NULL,
+  UNIQUE(routine_id, cycle_key, mapping_id),
+  FOREIGN KEY (routine_id) REFERENCES Routines (id) ON DELETE CASCADE,
+  FOREIGN KEY (mapping_id) REFERENCES Routine_Workouts (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS Logged_Sessions (
   id TEXT PRIMARY KEY NOT NULL,
   workout_id TEXT NOT NULL,
@@ -117,6 +129,7 @@ CREATE TABLE IF NOT EXISTS Active_Session (
   is_paused INTEGER DEFAULT 0,
   is_swapped INTEGER DEFAULT 0,
   draft_data TEXT, -- JSON blob for crash recovery/volatile swapping state
+  pending_swap TEXT, -- JSON blob: deferred Routine_Workouts swap applied only on finish
   last_modified INTEGER NOT NULL, -- Timestamp
   FOREIGN KEY (workout_id) REFERENCES Workouts (id),
   FOREIGN KEY (routine_id) REFERENCES Routines (id)

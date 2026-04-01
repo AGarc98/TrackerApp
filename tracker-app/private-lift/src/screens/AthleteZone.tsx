@@ -7,7 +7,8 @@ import { SettingsZone } from './SettingsZone';
 import { RoutineSelector } from '../components/RoutineSelector';
 import { BiometricsLogger } from '../components/BiometricsLogger';
 import { useRestTimer } from '../hooks/useRestTimer';
-import { WorkoutSelector } from '../components/WorkoutSelector';
+import { WorkoutSelector, RoutineSlot } from '../components/WorkoutSelector';
+import { PendingSwap } from '../store/WorkoutContext';
 import { ExerciseSelector } from '../components/ExerciseSelector';
 import { ScheduleView } from '../components/ScheduleView';
 
@@ -242,7 +243,8 @@ export const AthleteZone = () => {
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [routineSelectorVisible, setRoutineSelectorVisible] = useState(false);
-  const [workoutSelectorVisible, setWorkoutSelectorVisible] = useState(false);
+  const [workoutSelectorMode, setWorkoutSelectorMode] = useState<'swap' | 'pick' | null>(null);
+  const [swapSlots, setSwapSlots] = useState<RoutineSlot[]>([]);
   const [exerciseSelectorVisible, setExerciseSelectorVisible] = useState(false);
   const [exerciseToSwap, setExerciseToSwap] = useState<string | null>(null);
   const { timeLeft, isActive: isTimerActive, startTimer, stopTimer } = useRestTimer();
@@ -328,7 +330,7 @@ export const AthleteZone = () => {
             'Today is a rest day in your plan. Train anyway?',
             [
               { text: 'Rest', style: 'cancel' },
-              { text: 'Train Anyway', onPress: () => setWorkoutSelectorVisible(true) }
+              { text: 'Train Anyway', onPress: () => setWorkoutSelectorMode('pick') }
             ]
           );
           return;
@@ -349,7 +351,7 @@ export const AthleteZone = () => {
               'Next in your routine is a rest day. Skip it?',
               [
                 { text: 'Rest', style: 'cancel' },
-                { text: 'Skip It', onPress: () => setWorkoutSelectorVisible(true) }
+                { text: 'Skip It', onPress: () => setWorkoutSelectorMode('pick') }
               ]
             );
             return;
@@ -368,7 +370,7 @@ export const AthleteZone = () => {
         Alert.alert('Nothing Here', 'Add some workouts in the Vault first.');
         return;
       }
-      setWorkoutSelectorVisible(true);
+      setWorkoutSelectorMode('pick');
       return;
     }
 
@@ -425,6 +427,72 @@ export const AthleteZone = () => {
     setExerciseSelectorVisible(true);
   }, []);
 
+  const openSwapSelector = useCallback(() => {
+    if (!activeRoutineId || !activeRoutine) return;
+    const mappings = DB.getAll<any>(
+      'SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;',
+      [activeRoutineId]
+    );
+    const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    let currentMappingId: string | null = null;
+    if (activeRoutine.mode === RoutineMode.WEEKLY) {
+      const today = new Date();
+      const dayIdx = (today.getDay() + 6) % 7;
+      const shiftedDayIdx = (dayIdx - (activeRoutine.start_day_index || 0) + 7) % 7;
+      currentMappingId = mappings.find((m: any) => m.day_of_week === shiftedDayIdx)?.id ?? null;
+    } else {
+      const currentIdx = routineProgress.completed % mappings.length;
+      currentMappingId = mappings[currentIdx]?.id ?? null;
+    }
+
+    const slots: RoutineSlot[] = mappings
+      .filter((m: any) => m.workout_id && m.id !== currentMappingId)
+      .map((m: any, i: number) => {
+        const workout = DB.getOne<{ name: string }>('SELECT name FROM Workouts WHERE id = ?;', [m.workout_id]);
+        const label = activeRoutine.mode === RoutineMode.WEEKLY
+          ? WEEK_LABELS[((m.day_of_week ?? 0) + (activeRoutine.start_day_index || 0)) % 7]
+          : `Day ${i + 1}`;
+        return { mappingId: m.id, workoutId: m.workout_id, workoutName: workout?.name ?? 'Workout', label };
+      });
+
+    setSwapSlots(slots);
+    setWorkoutSelectorMode('swap');
+  }, [activeRoutineId, activeRoutine, routineProgress]);
+
+  const handleSwapWorkout = useCallback(async (workout: Workout, workoutExercises: any[], slot?: RoutineSlot) => {
+    setWorkoutSelectorMode(null);
+    let pendingSwap: PendingSwap | null = null;
+
+    if (activeRoutineId && activeRoutine && slot) {
+      const mappings = DB.getAll<any>(
+        'SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;',
+        [activeRoutineId]
+      );
+      let currentMapping: any = null;
+      if (activeRoutine.mode === RoutineMode.WEEKLY) {
+        const today = new Date();
+        const dayIdx = (today.getDay() + 6) % 7;
+        const shiftedDayIdx = (dayIdx - (activeRoutine.start_day_index || 0) + 7) % 7;
+        currentMapping = mappings.find((m: any) => m.day_of_week === shiftedDayIdx);
+      } else {
+        const currentIdx = routineProgress.completed % mappings.length;
+        currentMapping = mappings[currentIdx];
+      }
+
+      if (currentMapping?.workout_id && currentMapping.id !== slot.mappingId) {
+        pendingSwap = {
+          mappingIdA: currentMapping.id,
+          workoutIdA: currentMapping.workout_id,
+          mappingIdB: slot.mappingId,
+          workoutIdB: slot.workoutId,
+        };
+      }
+    }
+
+    await startWorkout(workout, workoutExercises, activeRoutineId, pendingSwap);
+  }, [activeRoutineId, activeRoutine, routineProgress, startWorkout]);
+
   const handleAddSet = useCallback((exerciseId: string) => {
     const currentSets = draftSets[exerciseId] || [];
     const lastSet = currentSets[currentSets.length - 1];
@@ -449,9 +517,9 @@ export const AthleteZone = () => {
           showsVerticalScrollIndicator={false}
         >
           {activeRoutine && (
-            <ScheduleView 
-              activeRoutine={activeRoutine} 
-              completedSessionsCount={routineProgress.completed} 
+            <ScheduleView
+              activeRoutine={activeRoutine}
+              completedSessionsCount={routineProgress.completed}
             />
           )}
 
@@ -467,20 +535,12 @@ export const AthleteZone = () => {
                 <Text className="text-text-main font-black text-2xl mb-1">{activeRoutine.name}</Text>
                 <Text className="text-text-muted font-bold text-xs uppercase tracking-widest">{activeRoutine.cycle_count} cycles completed</Text>
                 
-                <View className="flex-row space-x-3 mt-8">
-                  <TouchableOpacity 
-                    onPress={() => setRoutineSelectorVisible(true)}
-                    className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
-                  >
-                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Change Routine</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => setWorkoutSelectorVisible(true)}
-                    className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm"
-                  >
-                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Choose Workout</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={openSwapSelector}
+                  className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm mt-8"
+                >
+                  <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap Workout</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View className="items-center mb-10">
@@ -530,21 +590,29 @@ export const AthleteZone = () => {
           </View>
         </Modal>
 
-        <Modal visible={workoutSelectorVisible} animationType="slide" presentationStyle="pageSheet">
+        <Modal visible={workoutSelectorMode !== null} animationType="slide" presentationStyle="pageSheet">
           <View className="flex-1 bg-background pt-4">
             <View className="flex-row justify-end px-6">
-              <TouchableOpacity onPress={() => setWorkoutSelectorVisible(false)} className="bg-background border border-border px-4 py-2 rounded-full">
+              <TouchableOpacity onPress={() => setWorkoutSelectorMode(null)} className="bg-background border border-border px-4 py-2 rounded-full">
                 <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Cancel</Text>
               </TouchableOpacity>
             </View>
-            <WorkoutSelector
-              routineId={activeRoutineId}
-              onSelect={async (workout, exercises) => {
-                setWorkoutSelectorVisible(false);
-                await startWorkout(workout, exercises, activeRoutineId);
-              }}
-              onClose={() => setWorkoutSelectorVisible(false)}
-            />
+            {workoutSelectorMode === 'swap' ? (
+              <WorkoutSelector
+                slots={swapSlots}
+                title="Swap Workout"
+                subtitle="Pick a day to swap with today."
+                onSelect={handleSwapWorkout}
+                onClose={() => setWorkoutSelectorMode(null)}
+              />
+            ) : (
+              <WorkoutSelector
+                title="Select Workout"
+                subtitle="Choose a workout to start."
+                onSelect={(workout, exercises) => handleSwapWorkout(workout, exercises)}
+                onClose={() => setWorkoutSelectorMode(null)}
+              />
+            )}
           </View>
         </Modal>
 

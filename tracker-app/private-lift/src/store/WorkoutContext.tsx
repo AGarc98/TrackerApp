@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import db, { DB } from '../database/db';
+import { DB } from '../database/db';
 import { ActiveSession, SetData, Exercise, Workout, UserSettings, SetType } from '../types/database';
 
 interface WorkoutContextType {
@@ -9,7 +9,7 @@ interface WorkoutContextType {
   draftSets: Record<string, SetData[]>;
   isLoading: boolean;
   settings: UserSettings | null;
-  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[], routineId?: string | null) => Promise<void>;
+  startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[], routineId?: string | null, pendingSwap?: PendingSwap | null) => Promise<void>;
   logSet: (exerciseId: string, sets: SetData[]) => Promise<void>;
   swapExercise: (oldExerciseId: string, newExerciseId: string) => Promise<void>;
   finishWorkout: (rpe?: number) => Promise<void>;
@@ -17,6 +17,13 @@ interface WorkoutContextType {
   resumeWorkout: () => Promise<void>;
   setActiveRoutine: (routineId: string | null, duration?: number, startDayIndex?: number) => Promise<void>;
   updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
+}
+
+export interface PendingSwap {
+  mappingIdA: string; // slot that will receive workoutIdB
+  workoutIdA: string; // original workout in slot A (today/current)
+  mappingIdB: string; // slot that will receive workoutIdA
+  workoutIdB: string; // the workout the user picked (swapped into today)
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
@@ -122,7 +129,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null; target_time_ms?: number | null; target_distance?: number | null }[], routineId: string | null = null) => {
+  const startWorkout = async (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null; target_time_ms?: number | null; target_distance?: number | null }[], routineId: string | null = null, pendingSwap: PendingSwap | null = null) => {
     try {
       const sessionId = generateId();
       const startTime = Date.now();
@@ -164,22 +171,25 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const draftData = JSON.stringify(initialDrafts);
 
+      const pendingSwapJson = pendingSwap ? JSON.stringify(pendingSwap) : null;
+
       DB.transaction(() => {
         DB.run('DELETE FROM Active_Session;');
 
         DB.run(
-          'INSERT INTO Active_Session (id, workout_id, routine_id, start_time, is_paused, is_swapped, draft_data, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
-          [sessionId, workout.id, routineId, startTime, false, false, draftData, lastModified]
+          'INSERT INTO Active_Session (id, workout_id, routine_id, start_time, is_paused, is_swapped, draft_data, pending_swap, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);',
+          [sessionId, workout.id, routineId, startTime, false, false, draftData, pendingSwapJson, lastModified]
         );
 
-        setActiveSession({ 
-          id: sessionId, 
-          workout_id: workout.id, 
-          routine_id: routineId, 
-          start_time: startTime, 
+        setActiveSession({
+          id: sessionId,
+          workout_id: workout.id,
+          routine_id: routineId,
+          start_time: startTime,
           is_paused: false,
-          is_swapped: false, 
-          draft_data: draftData, 
+          is_swapped: false,
+          draft_data: draftData,
+          pending_swap: pendingSwapJson,
           last_modified: lastModified,
           current_exercise_id: null,
           current_set_index: null,
@@ -285,6 +295,39 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           if (sessionsLogged > 0 && sessionsLogged % routineWorkoutCount === 0) {
             DB.run('UPDATE Routines SET cycle_count = cycle_count + 1, last_modified = ? WHERE id = ?;', [lastModified, activeSession.routine_id]);
+          }
+        }
+
+        if (activeSession.routine_id && activeSession.pending_swap) {
+          try {
+            const swap: PendingSwap = JSON.parse(activeSession.pending_swap);
+            const routine = DB.getOne<{ mode: string; start_day_index: number }>('SELECT mode, start_day_index FROM Routines WHERE id = ?;', [activeSession.routine_id]);
+
+            let cycleKey: string;
+            if (routine?.mode === 'WEEKLY') {
+              const now = new Date();
+              const weekStart = new Date(now);
+              weekStart.setDate(now.getDate() - (now.getDay() + 6) % 7);
+              weekStart.setHours(0, 0, 0, 0);
+              cycleKey = weekStart.getTime().toString();
+            } else {
+              // sessionsLogged already includes this session (inserted above)
+              const sessionsLogged = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [activeSession.routine_id])?.count || 1;
+              const cycleLength = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [activeSession.routine_id])?.count || 1;
+              cycleKey = Math.floor((sessionsLogged - 1) / cycleLength).toString();
+            }
+
+            // Write both sides of the swap as cycle-scoped overrides (INSERT OR REPLACE respects the UNIQUE constraint)
+            DB.run(
+              'INSERT OR REPLACE INTO Routine_Cycle_Overrides (id, routine_id, cycle_key, mapping_id, override_workout_id, last_modified) VALUES (?, ?, ?, ?, ?, ?);',
+              [generateId(), activeSession.routine_id, cycleKey, swap.mappingIdA, swap.workoutIdB, lastModified]
+            );
+            DB.run(
+              'INSERT OR REPLACE INTO Routine_Cycle_Overrides (id, routine_id, cycle_key, mapping_id, override_workout_id, last_modified) VALUES (?, ?, ?, ?, ?, ?);',
+              [generateId(), activeSession.routine_id, cycleKey, swap.mappingIdB, swap.workoutIdA, lastModified]
+            );
+          } catch (e) {
+            console.error('Failed to apply pending cycle swap:', e);
           }
         }
 

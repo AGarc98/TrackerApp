@@ -176,6 +176,7 @@ export interface ActiveSession {
   is_paused: boolean;
   is_swapped: boolean;
   draft_data: string | null; // JSON blob
+  pending_swap: string | null; // JSON blob: { mappingIdA, workoutIdA, mappingIdB, workoutIdB }
   last_modified: number;
 }
 

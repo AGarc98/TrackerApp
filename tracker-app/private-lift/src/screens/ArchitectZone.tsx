@@ -663,6 +663,7 @@ export const ArchitectZone = () => {
     const isActive = item.id === activeRoutineId;
     return (
       <View className={`bg-surface p-6 mb-4 rounded-[32px] shadow-sm border ${isActive ? 'border-primary' : 'border-border'}`}>
+        {/* Top row: name/tags + activate */}
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-1 mr-4">
             <Text className="text-xl font-black text-text-main mb-1">{item.name}</Text>
@@ -687,27 +688,29 @@ export const ArchitectZone = () => {
               )}
             </View>
           </View>
-          <View className="flex-row">
-            <TouchableOpacity onPress={() => handleEditRoutine(item)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2">
-              <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleExportRoutine(item)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2">
-              <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Export</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2">
-              <Text className="text-accent font-black text-[10px] uppercase tracking-widest">Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={async () => { await setActiveRoutine(isActive ? null : item.id); }}
-              className={`p-3 px-4 rounded-2xl shadow-sm ${isActive ? 'bg-accent-soft' : 'bg-primary'}`}
-            >
-              <Text className={`font-black text-[10px] uppercase tracking-widest ${isActive ? 'text-accent' : 'text-surface'}`}>
-                {isActive ? 'Deactivate' : 'Activate'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={async () => { await setActiveRoutine(isActive ? null : item.id); }}
+            className={`p-3 px-4 rounded-2xl shadow-sm ${isActive ? 'bg-accent-soft' : 'bg-primary'}`}
+          >
+            <Text className={`font-black text-[10px] uppercase tracking-widest ${isActive ? 'text-accent' : 'text-surface'}`}>
+              {isActive ? 'Deactivate' : 'Activate'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View className="flex-row justify-between items-center border-t border-border pt-3">
+        {/* Action buttons row */}
+        <View className="flex-row gap-2 border-t border-border pt-3 mb-3">
+          <TouchableOpacity onPress={() => handleEditRoutine(item)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleExportRoutine(item)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Export</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-accent font-black text-[10px] uppercase tracking-widest">Delete</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Stats row */}
+        <View className="flex-row gap-4">
           <Text className="text-text-muted text-[10px] font-black uppercase tracking-[2px]">
             {item.cycle_count} / {item.duration} cycles
           </Text>
