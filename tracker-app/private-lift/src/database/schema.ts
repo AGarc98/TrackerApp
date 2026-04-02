@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS User_Settings (
   sync_history_limit_months INTEGER DEFAULT 6, -- Design Doc 1.0 subset preference
   last_sync_timestamp INTEGER,
   vault_connection_token TEXT,
+  onboarding_complete INTEGER DEFAULT 0, -- Boolean
   last_modified INTEGER NOT NULL, -- Timestamp
   FOREIGN KEY (active_routine_id) REFERENCES Routines (id)
 );

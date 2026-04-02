@@ -43,9 +43,6 @@ const Header = memo(({ showActivePill, onSettingsPress }: { showActivePill?: boo
   <View className="px-6 pt-2 pb-4 bg-background">
     <View className="flex-row justify-between items-center">
       <View className="flex-row items-center space-x-3">
-        <View className="w-8 h-8 bg-primary rounded-xl items-center justify-center rotate-6 shadow-md shadow-primary/20">
-          <Text className="text-surface text-base font-black italic">L</Text>
-        </View>
         <Text className="text-2xl font-black text-text-main tracking-tighter">Private Lift</Text>
       </View>
       <View className="flex-row items-center space-x-3">
@@ -110,7 +107,7 @@ const SetRow = memo(({
               <View className="flex-1">
                 <TextInput
                   className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-                  placeholder="SEC"
+                  placeholder="Secs"
                   placeholderTextColor="var(--color-text-muted)"
                   keyboardType="numeric"
                   value={localTime}
@@ -121,7 +118,7 @@ const SetRow = memo(({
               <View className="flex-1">
                 <TextInput
                   className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-                  placeholder="DIST"
+                  placeholder="Dist"
                   placeholderTextColor="var(--color-text-muted)"
                   keyboardType="numeric"
                   value={localDistance}
@@ -135,7 +132,7 @@ const SetRow = memo(({
               <View className="flex-1">
                 <TextInput
                   className="bg-background border border-border rounded-2xl p-4 text-center font-black text-text-main text-lg"
-                  placeholder="REPS"
+                  placeholder="Reps"
                   placeholderTextColor="var(--color-text-muted)"
                   keyboardType="numeric"
                   value={localReps}
@@ -229,9 +226,9 @@ const ExerciseItem = memo(({
     <TouchableOpacity
       onPress={() => onAddSet(exerciseId)}
       activeOpacity={0.6}
-      className="mt-2 py-3 items-center"
+      className="mt-2 py-3.5 items-center bg-background border border-dashed border-border rounded-2xl"
     >
-      <Text className="text-[10px] font-black text-text-muted/50 uppercase tracking-widest">+ Add Set</Text>
+      <Text className="text-xs font-black text-text-muted uppercase tracking-widest">+ Add Set</Text>
     </TouchableOpacity>
   </View>
 ));
@@ -249,6 +246,7 @@ export const AthleteZone = () => {
   const [exerciseToSwap, setExerciseToSwap] = useState<string | null>(null);
   const { timeLeft, isActive: isTimerActive, startTimer, stopTimer } = useRestTimer();
   const [routineProgress, setRoutineProgress] = useState({ completed: 0, total: 0 });
+  const [todayInfo, setTodayInfo] = useState<{ workoutName: string | null; isRestDay: boolean; doneToday: boolean } | null>(null);
   const [rpeModalVisible, setRpeModalVisible] = useState(false);
   const [hasCheckedResume, setHasCheckedResume] = useState(false);
   const [workoutName, setWorkoutName] = useState('');
@@ -265,7 +263,8 @@ export const AthleteZone = () => {
         'Resume Workout?',
         'You have an unfinished session. What would you like to do?',
         [
-          { text: 'Discard Session', style: 'destructive', onPress: () => discardWorkout() },
+          { text: 'Discard', style: 'destructive', onPress: () => discardWorkout() },
+          { text: 'Cancel', style: 'cancel' },
           { text: 'Resume', onPress: () => {} }
         ]
       );
@@ -300,10 +299,38 @@ export const AthleteZone = () => {
         const total = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Routine_Workouts WHERE routine_id = ?;', [routine.id])?.count || 0;
         const completed = DB.getOne<{ count: number }>('SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ?;', [routine.id])?.count || 0;
         setRoutineProgress({ completed, total });
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const doneToday = (DB.getOne<{ count: number }>(
+          'SELECT COUNT(*) as count FROM Logged_Sessions WHERE routine_id = ? AND start_time >= ?;',
+          [routine.id, todayStart.getTime()]
+        )?.count || 0) > 0;
+
+        const allMappings = DB.getAll<any>(
+          'SELECT * FROM Routine_Workouts WHERE routine_id = ? ORDER BY order_index ASC;',
+          [routine.id]
+        );
+        let targetMapping: any = null;
+        if (routine.mode === RoutineMode.WEEKLY) {
+          const dayIdx = (new Date().getDay() + 6) % 7;
+          const shiftedDayIdx = (dayIdx - (routine.start_day_index || 0) + 7) % 7;
+          targetMapping = allMappings.find((m: any) => m.day_of_week === shiftedDayIdx) ?? null;
+        } else {
+          targetMapping = allMappings[completed % (allMappings.length || 1)] ?? null;
+        }
+
+        const isRestDay = !targetMapping?.workout_id;
+        const todayWorkoutName = targetMapping?.workout_id
+          ? DB.getOne<{ name: string }>('SELECT name FROM Workouts WHERE id = ?;', [targetMapping.workout_id])?.name ?? null
+          : null;
+
+        setTodayInfo({ workoutName: todayWorkoutName, isRestDay, doneToday });
       }
     } else {
       setActiveRoutine(null);
       setRoutineProgress({ completed: 0, total: 0 });
+      setTodayInfo(null);
     }
   };
 
@@ -367,7 +394,7 @@ export const AthleteZone = () => {
 
     if (!targetWorkout) {
       if (availableWorkouts.length === 0) {
-        Alert.alert('Nothing Here', 'Add some workouts in the Vault first.');
+        Alert.alert('Nothing Here', 'Add some workouts in Build first.');
         return;
       }
       setWorkoutSelectorMode('pick');
@@ -524,23 +551,41 @@ export const AthleteZone = () => {
           )}
 
           <View className="mx-6 bg-surface p-10 rounded-[50px] shadow-2xl shadow-text-main/5 items-center border border-border">
-            <Text className="text-3xl font-black text-text-main mb-2 tracking-tighter text-center">Athlete Zone</Text>
+            <Text className="text-3xl font-black text-text-main mb-2 tracking-tighter text-center">Train</Text>
             <Text className="text-text-muted font-medium text-center mb-10 leading-5">
               Ready when you are. Start your routine or pick a workout below.
             </Text>
             
             {activeRoutine ? (
-              <View className="items-center mb-10 bg-background/50 w-full py-8 rounded-[40px] border border-border">
-                <Text className="text-primary font-black uppercase tracking-widest text-[10px] mb-2">Active Routine</Text>
-                <Text className="text-text-main font-black text-2xl mb-1">{activeRoutine.name}</Text>
-                <Text className="text-text-muted font-bold text-xs uppercase tracking-widest">{activeRoutine.cycle_count} cycles completed</Text>
-                
-                <TouchableOpacity
-                  onPress={openSwapSelector}
-                  className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm mt-8"
-                >
-                  <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap Workout</Text>
-                </TouchableOpacity>
+              <View className="items-center mb-10 bg-background/50 w-full py-8 px-6 rounded-[40px] border border-border">
+                <Text className="text-primary font-black uppercase tracking-widest text-[10px] mb-1 text-center">{activeRoutine.name}</Text>
+                <Text className="text-text-muted font-bold text-[10px] uppercase tracking-widest text-center mb-6">{activeRoutine.cycle_count} cycles completed</Text>
+
+                {todayInfo?.doneToday ? (
+                  <View className="items-center">
+                    <Text className="text-text-main font-black text-2xl tracking-tighter text-center mb-1">All done today.</Text>
+                    <Text className="text-text-muted font-medium text-sm text-center">Great work — rest up and come back stronger.</Text>
+                  </View>
+                ) : todayInfo?.isRestDay ? (
+                  <View className="items-center">
+                    <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest text-center mb-1">Today</Text>
+                    <Text className="text-text-main font-black text-2xl tracking-tighter text-center">Rest Day</Text>
+                  </View>
+                ) : todayInfo?.workoutName ? (
+                  <View className="items-center">
+                    <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest text-center mb-1">Today</Text>
+                    <Text className="text-text-main font-black text-2xl tracking-tighter text-center">{todayInfo.workoutName}</Text>
+                  </View>
+                ) : null}
+
+                {!todayInfo?.doneToday && !todayInfo?.isRestDay && (
+                  <TouchableOpacity
+                    onPress={openSwapSelector}
+                    className="bg-surface px-5 py-3 rounded-2xl border border-border shadow-sm mt-8"
+                  >
+                    <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest">Swap Workout</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View className="items-center mb-10">
@@ -701,13 +746,14 @@ export const AthleteZone = () => {
             }, []).map((row, rowIndex) => (
               <View key={rowIndex} className="flex-row justify-center space-x-3 mb-3">
                 {row.map((n) => {
-                  const color = n <= 3 ? 'bg-success' : n <= 6 ? 'bg-accent' : n <= 9 ? 'bg-warning' : 'bg-error';
+                  const bgColor = n <= 3 ? '#10B981' : n <= 6 ? '#EAB308' : n <= 9 ? '#F97316' : '#EF4444';
                   return (
                     <TouchableOpacity
                       key={n}
                       onPress={() => { finishWorkout(n); setRpeModalVisible(false); }}
                       activeOpacity={0.75}
-                      className={`w-14 h-14 rounded-2xl items-center justify-center shadow-sm ${color}`}
+                      className="w-14 h-14 rounded-2xl items-center justify-center shadow-sm"
+                      style={{ backgroundColor: bgColor }}
                     >
                       <Text className="text-surface text-lg font-black">{n}</Text>
                     </TouchableOpacity>

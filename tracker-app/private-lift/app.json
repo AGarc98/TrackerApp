@@ -2,7 +2,7 @@
   "expo": {
     "name": "private-lift",
     "slug": "private-lift",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "PrivateLift logs your workout sessions to your calendar.",
+        "NSCalendarsFullAccessUsageDescription": "PrivateLift logs your workout sessions to your calendar."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +26,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.privatelift"
+      "package": "com.anonymous.privatelift",
+      "permissions": ["android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

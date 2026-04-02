@@ -444,6 +444,8 @@ export const ArchitectZone = () => {
 
       // Detect conflicts
       const conflicts: ImportConflict[] = [];
+      // Deduplicate exercise conflict checks — the same exercise can appear in multiple workouts
+      const seenExerciseNames = new Set<string>();
 
       const existingRoutine = DB.getOne<any>('SELECT id FROM Routines WHERE name = ?;', [routine.name]);
       if (existingRoutine) {
@@ -456,6 +458,8 @@ export const ArchitectZone = () => {
           conflicts.push({ kind: 'workout', name: workout.name });
         }
         exercises.forEach((ex: any) => {
+          if (seenExerciseNames.has(ex.name)) return;
+          seenExerciseNames.add(ex.name);
           const existingEx = DB.getOne<any>('SELECT id, type FROM Exercises WHERE name = ?;', [ex.name]);
           if (existingEx && existingEx.type !== ex.type) {
             // Same name but different type — always flag this so the user is aware
@@ -485,6 +489,7 @@ export const ArchitectZone = () => {
   const executeImport = (bundle: any, strategy: ImportStrategy) => {
     const { routine, routine_workouts, workouts } = bundle;
     const lastModified = Date.now();
+    let savedRoutineName = routine.name;
 
     try {
       DB.transaction(() => {
@@ -537,8 +542,9 @@ export const ArchitectZone = () => {
                 [finalExId, ex.name, ex.description || null, ex.type, ex.default_rest_duration || 90, lastModified]);
             }
 
-            // Insert/re-insert muscle groups for new or replaced exercises
-            const needsMuscles = !existingEx || strategy === 'replace';
+            // Insert/re-insert muscle groups for new exercises, replacements, or type-conflict
+            // copies (where existingEx is truthy but a new record was still created).
+            const needsMuscles = !existingEx || strategy === 'replace' || finalExId !== existingEx.id;
             if (needsMuscles) {
               const muscles = ex.all_muscles ? ex.all_muscles.split(',') : [];
               muscles.forEach((mg: string, i: number) => {
@@ -565,6 +571,7 @@ export const ArchitectZone = () => {
         } else {
           finalRoutineId = Math.random().toString(36).substring(2, 15);
           const finalName = existingRoutine ? `${routine.name} (Imported)` : routine.name;
+          savedRoutineName = finalName;
           DB.run('INSERT INTO Routines (id, name, description, mode, duration, start_day_index, cycle_count, last_modified) VALUES (?, ?, ?, ?, ?, ?, 0, ?);',
             [finalRoutineId, finalName, routine.description || null, routine.mode, routine.duration, routine.start_day_index ?? 0, lastModified]);
         }
@@ -584,7 +591,7 @@ export const ArchitectZone = () => {
       setImportConflicts([]);
       loadData();
       const verb = strategy === 'replace' ? 'updated' : 'imported';
-      Alert.alert('Done', `"${routine.name}" has been ${verb}.`);
+      Alert.alert('Done', `"${savedRoutineName}" has been ${verb}.`);
     } catch (e) {
       console.error('Import execute failed:', e);
       Alert.alert('Import Failed', 'Something went wrong while saving. No changes were made.');
@@ -672,7 +679,9 @@ export const ArchitectZone = () => {
             )}
             <View className="flex-row flex-wrap gap-2">
               <View className="bg-primary-soft px-2 py-1 rounded-md">
-                <Text className="text-[10px] font-bold text-primary uppercase tracking-widest">{item.mode}</Text>
+                <Text className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                  {item.mode === RoutineMode.WEEKLY ? 'Weekly' : 'Flexible'}
+                </Text>
               </View>
               {item.mode === RoutineMode.WEEKLY && (
                 <View className="bg-background px-2 py-1 rounded-md border border-border">
@@ -699,14 +708,14 @@ export const ArchitectZone = () => {
         </View>
         {/* Action buttons row */}
         <View className="flex-row gap-2 border-t border-border pt-3 mb-3">
-          <TouchableOpacity onPress={() => handleEditRoutine(item)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
-            <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text>
+          <TouchableOpacity onPress={() => handleEditRoutine(item)} className="flex-1 bg-background py-3.5 px-4 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleExportRoutine(item)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
-            <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Export</Text>
+          <TouchableOpacity onPress={() => handleExportRoutine(item)} className="flex-1 bg-background py-3.5 px-4 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Export</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="flex-1 bg-background p-3 rounded-2xl border border-border shadow-sm items-center">
-            <Text className="text-accent font-black text-[10px] uppercase tracking-widest">Delete</Text>
+          <TouchableOpacity onPress={() => handleDeleteRoutine(item.id)} className="flex-1 bg-background py-3.5 px-4 rounded-2xl border border-border shadow-sm items-center">
+            <Text className="text-accent font-black text-xs uppercase tracking-widest">Delete</Text>
           </TouchableOpacity>
         </View>
         {/* Stats row */}
@@ -746,9 +755,9 @@ export const ArchitectZone = () => {
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center space-x-3">
             <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
-              <Text className="text-surface text-base font-black italic">A</Text>
+              <Text className="text-surface text-base font-black italic">B</Text>
             </View>
-            <Text className="text-2xl font-black text-text-main tracking-tighter">Architect</Text>
+            <Text className="text-2xl font-black text-text-main tracking-tighter">uild</Text>
           </View>
           <View className="flex-row items-center gap-2">
             {activeSubTab === 'routines' && (
@@ -783,7 +792,7 @@ export const ArchitectZone = () => {
 
         <View className="flex-row mt-6 space-x-6">
           {(['routines', 'workouts', 'exercises'] as const).map((tab) => (
-            <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab)} className="relative pb-2">
+            <TouchableOpacity key={tab} onPress={() => setActiveSubTab(tab)} className="relative py-3 pr-4">
               <Text className={`text-[10px] font-black uppercase tracking-[2px] ${activeSubTab === tab ? 'text-primary' : 'text-text-muted'}`}>{tab}</Text>
               {activeSubTab === tab && <View className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-full" />}
             </TouchableOpacity>
@@ -804,7 +813,7 @@ export const ArchitectZone = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <TouchableOpacity
               onPress={() => setMuscleFilter(null)}
-              className={`px-3 py-1.5 mr-2 rounded-full border ${!muscleFilter ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+              className={`px-4 py-2.5 mr-2 rounded-full border ${!muscleFilter ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
             >
               <Text className={`text-[10px] font-black uppercase tracking-widest ${!muscleFilter ? 'text-surface' : 'text-text-muted'}`}>All</Text>
             </TouchableOpacity>
@@ -812,7 +821,7 @@ export const ArchitectZone = () => {
               <TouchableOpacity
                 key={mg}
                 onPress={() => setMuscleFilter(muscleFilter === mg ? null : mg)}
-                className={`px-3 py-1.5 mr-2 rounded-full border ${muscleFilter === mg ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                className={`px-4 py-2.5 mr-2 rounded-full border ${muscleFilter === mg ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
               >
                 <Text className={`text-[10px] font-black uppercase tracking-widest ${muscleFilter === mg ? 'text-surface' : 'text-text-muted'}`}>
                   {mg.replace(/_/g, ' ')}
@@ -866,14 +875,14 @@ export const ArchitectZone = () => {
                 )}
               </View>
               <View className="flex-row">
-                <TouchableOpacity onPress={() => handleEditItem(item)} className="bg-background p-3 rounded-2xl border border-border shadow-sm mr-2">
-                  <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Edit</Text>
+                <TouchableOpacity onPress={() => handleEditItem(item)} className="bg-background py-3 px-4 rounded-2xl border border-border shadow-sm mr-2">
+                  <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => activeSubTab === 'exercises' ? handleDeleteExercise(item.id) : handleDeleteDay(item.id)}
-                  className="bg-background p-3 rounded-2xl border border-border shadow-sm"
+                  className="bg-background py-3 px-4 rounded-2xl border border-border shadow-sm"
                 >
-                  <Text className="text-accent font-black text-[10px] uppercase tracking-widest">Delete</Text>
+                  <Text className="text-accent font-black text-xs uppercase tracking-widest">Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1186,7 +1195,9 @@ export const ArchitectZone = () => {
                       onPress={() => setEditingRoutine({ ...editingRoutine!, mode: m, workout_mappings: m === RoutineMode.WEEKLY ? Array(7).fill(null) : [], week_numbers: [], ab_weeks_enabled: false })}
                       className={`flex-1 p-4 rounded-2xl mr-2 border ${editingRoutine?.mode === m ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
                     >
-                      <Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-surface' : 'text-text-muted'}`}>{m}</Text>
+                      <Text className={`text-center font-black text-[10px] uppercase tracking-widest ${editingRoutine?.mode === m ? 'text-surface' : 'text-text-muted'}`}>
+                        {m === RoutineMode.WEEKLY ? 'Weekly' : 'Flexible'}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1243,13 +1254,13 @@ export const ArchitectZone = () => {
                       <View>
                         <Text className="text-xs font-black text-text-muted uppercase tracking-widest">Workout Order</Text>
                         <Text className="text-[10px] text-text-muted mt-0.5">
-                          {editingRoutine?.ab_weeks_enabled ? 'A/B week mode' : 'Linear sequence'}
+                          {editingRoutine?.ab_weeks_enabled ? 'Alternate between Week A and Week B' : 'Repeat in order'}
                         </Text>
                       </View>
                       <View className="flex-row items-center">
                         <TouchableOpacity
                           onPress={() => setEditingRoutine(prev => prev ? { ...prev, ab_weeks_enabled: !prev.ab_weeks_enabled } : null)}
-                          className={`px-3 py-1.5 rounded-lg border mr-3 ${editingRoutine?.ab_weeks_enabled ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                          className={`px-4 py-2.5 rounded-lg border mr-3 ${editingRoutine?.ab_weeks_enabled ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
                         >
                           <Text className={`text-[10px] font-black uppercase tracking-widest ${editingRoutine?.ab_weeks_enabled ? 'text-surface' : 'text-text-muted'}`}>A/B Weeks</Text>
                         </TouchableOpacity>
@@ -1261,7 +1272,7 @@ export const ArchitectZone = () => {
                               return { ...prev, workout_mappings: [...prev.workout_mappings, id], week_numbers: [...prev.week_numbers, 0] };
                             });
                           })}
-                          className="bg-primary-soft px-3 py-1.5 rounded-lg border border-primary/20"
+                          className="bg-primary-soft px-4 py-2.5 rounded-lg border border-primary/20"
                         >
                           <Text className="text-primary text-[10px] font-black uppercase tracking-widest">+ Add</Text>
                         </TouchableOpacity>
@@ -1278,7 +1289,7 @@ export const ArchitectZone = () => {
                                 newWeeks[idx] = newWeeks[idx] === 1 ? 0 : 1;
                                 return { ...prev, week_numbers: newWeeks };
                               })}
-                              className={`w-7 h-7 rounded-lg items-center justify-center mr-3 border ${editingRoutine.week_numbers[idx] === 1 ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                              className={`w-10 h-10 rounded-lg items-center justify-center mr-3 border ${editingRoutine.week_numbers[idx] === 1 ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
                             >
                               <Text className={`text-[10px] font-black ${editingRoutine.week_numbers[idx] === 1 ? 'text-surface' : 'text-text-muted'}`}>
                                 {editingRoutine.week_numbers[idx] === 1 ? 'B' : 'A'}

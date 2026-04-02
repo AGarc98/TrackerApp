@@ -44,14 +44,15 @@ export const seedDatabase = async () => {
           w.exercises.forEach((we: any, index) => {
             const weId = `${w.id}-we-${index}`;
             DB.run(
-              'INSERT OR IGNORE INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?);',
+              'INSERT OR IGNORE INTO Workout_Exercises (id, workout_id, exercise_id, order_index, target_sets, target_reps, target_time_ms, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
               [
-                weId, 
-                w.id, 
-                we.exercise_id, 
-                we.order_index ?? index, 
-                we.target_sets, 
-                we.target_reps, 
+                weId,
+                w.id,
+                we.exercise_id,
+                we.order_index ?? index,
+                we.target_sets,
+                we.target_reps ?? null,
+                we.target_time_ms ?? null,
                 now
               ]
             );

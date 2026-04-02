@@ -206,7 +206,7 @@ export const DataZone = () => {
     return (
       <View className="flex-1 bg-background items-center justify-center">
         <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text className="mt-4 text-text-muted font-black uppercase tracking-widest text-[10px]">Analyzing Vault...</Text>
+        <Text className="mt-4 text-text-muted font-black uppercase tracking-widest text-[10px]">Loading...</Text>
       </View>
     );
   }
@@ -218,9 +218,9 @@ export const DataZone = () => {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center space-x-3">
             <View className="w-8 h-8 bg-text-main rounded-xl items-center justify-center rotate-6 shadow-md shadow-text-main/20">
-              <Text className="text-surface text-base font-black italic">D</Text>
+              <Text className="text-surface text-base font-black italic">A</Text>
             </View>
-            <Text className="text-2xl font-black text-text-main tracking-tighter">Analytics</Text>
+            <Text className="text-2xl font-black text-text-main tracking-tighter">nalytics</Text>
           </View>
           <View className="flex-row items-center space-x-3">
             {isLoading && <ActivityIndicator size="small" color="#8B5CF6" />}
@@ -310,7 +310,7 @@ export const DataZone = () => {
                   key={w}
                   onPress={() => setSelectedWeeks(w)}
                   disabled={isLoading}
-                  className={`px-4 py-1.5 rounded-lg ${selectedWeeks === w ? 'bg-background' : ''}`}
+                  className={`px-4 py-2.5 rounded-lg ${selectedWeeks === w ? 'bg-background' : ''}`}
                 >
                   <Text className={`font-black text-xs ${selectedWeeks === w ? 'text-text-main' : 'text-text-muted'}`}>
                     {w}W
@@ -328,7 +328,7 @@ export const DataZone = () => {
                   key={m.key}
                   onPress={() => setSelectedMetric(m.key)}
                   disabled={isLoading}
-                  className={`px-4 py-1.5 rounded-lg ${selectedMetric === m.key ? 'bg-background' : ''}`}
+                  className={`px-4 py-2.5 rounded-lg ${selectedMetric === m.key ? 'bg-background' : ''}`}
                 >
                   <Text className={`font-black text-xs ${selectedMetric === m.key ? 'text-text-main' : 'text-text-muted'}`}>
                     {m.label}

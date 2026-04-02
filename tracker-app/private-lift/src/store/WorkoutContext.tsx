@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Alert } from 'react-native';
 import { DB } from '../database/db';
 import { ActiveSession, SetData, Exercise, Workout, UserSettings, SetType } from '../types/database';
+import { addWorkoutEvent } from '../services/CalendarService';
 
 interface WorkoutContextType {
   activeSession: ActiveSession | null;
@@ -336,6 +337,14 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setActiveSession(null);
       setDraftSets({});
+
+      if (settings?.calendar_sync_enabled) {
+        const workout = DB.getOne<{ name: string }>('SELECT name FROM Workouts WHERE id = ?;', [activeSession.workout_id]);
+        if (workout) {
+          addWorkoutEvent({ workoutName: workout.name, startTime: activeSession.start_time, endTime, rpe: rpe ?? null });
+        }
+      }
+
       Alert.alert('Saved!', 'Your session has been logged.');
     } catch (error) {
       console.error('Failed to finish workout:', error);

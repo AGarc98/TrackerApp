@@ -1,8 +1,8 @@
-import * as SQLite from 'expo-sqlite';
+import { open } from 'react-native-quick-sqlite';
 import { SCHEMA_V1 } from './schema';
 
-const db = SQLite.openDatabaseSync('privatelift.db');
-db.execSync('PRAGMA foreign_keys = ON;');
+const db = open({ name: 'privatelift.db' });
+db.execute('PRAGMA foreign_keys = ON;');
 
 export interface QueryResult {
   rowsAffected: number;
@@ -12,31 +12,31 @@ export interface QueryResult {
 export const initDatabase = async () => {
   try {
     // 1. Temporarily disable foreign keys to allow dropping tables with relationships
-    db.execSync('PRAGMA foreign_keys = OFF;');
-    
+    db.execute('PRAGMA foreign_keys = OFF;');
+
     // 2. Drop all existing tables for a "Hard Reset" (Development Mode)
     const tables = [
-      'Exercises', 'Exercise_Muscle_Groups', 'Workouts', 'Workout_Exercises', 
-      'Routines', 'Routine_Workouts', 'Logged_Sessions', 'Logged_Sets', 
+      'Exercises', 'Exercise_Muscle_Groups', 'Workouts', 'Workout_Exercises',
+      'Routines', 'Routine_Workouts', 'Logged_Sessions', 'Logged_Sets',
       'User_Biometrics', 'Active_Session', 'User_Settings'
     ];
 
     for (const table of tables) {
-      db.execSync(`DROP TABLE IF EXISTS ${table};`);
+      db.execute(`DROP TABLE IF EXISTS ${table};`);
     }
 
     // 3. Re-enable foreign keys
-    db.execSync('PRAGMA foreign_keys = ON;');
-    
+    db.execute('PRAGMA foreign_keys = ON;');
+
     // 4. Split SCHEMA_V1 into individual statements and execute
     const statements = SCHEMA_V1.split(';').filter(s => s.trim() !== '');
     for (const statement of statements) {
-      db.execSync(statement);
+      db.execute(statement);
     }
 
     // 5. Initialize User Settings with default values
-    db.runSync(
-      'INSERT INTO User_Settings (id, weight_unit, theme, last_modified) VALUES (1, "KG", "base", ?);', 
+    db.execute(
+      'INSERT INTO User_Settings (id, weight_unit, theme, last_modified) VALUES (1, "KG", "base", ?);',
       [Date.now()]
     );
 
@@ -52,7 +52,7 @@ export const initDatabase = async () => {
  */
 export const select = <T>(sql: string, params: any[] = []): T[] => {
   try {
-    return db.getAllSync(sql, params) as T[];
+    return db.execute(sql, params).rows._array as T[];
   } catch (error) {
     console.error('SELECT query failed:', sql, error);
     throw error;
@@ -64,10 +64,10 @@ export const select = <T>(sql: string, params: any[] = []): T[] => {
  */
 export const execute = (sql: string, params: any[] = []): QueryResult => {
   try {
-    const result = db.runSync(sql, params);
-    return { 
-      rowsAffected: result.changes, 
-      insertId: result.lastInsertRowId 
+    const result = db.execute(sql, params);
+    return {
+      rowsAffected: result.rowsAffected,
+      insertId: result.insertId ?? 0,
     };
   } catch (error) {
     console.error('Execute query failed:', sql, error);
@@ -112,7 +112,8 @@ export class DB {
         key.endsWith('_enabled') ||
         key.endsWith('_on') ||
         key.endsWith('_sound') ||
-        key.endsWith('_vibrate')
+        key.endsWith('_vibrate') ||
+        key.endsWith('_complete')
       ) {
         formatted[key] = !!formatted[key];
       }
@@ -127,8 +128,8 @@ export class DB {
 
   static async getAllAsync<T>(sql: string, params: any[] = []): Promise<T[]> {
     try {
-      const results = await db.getAllAsync(sql, this.prepareParams(params)) as any[];
-      return results.map(row => this.formatResult<T>(row));
+      const result = await db.executeAsync(sql, this.prepareParams(params));
+      return (result.rows._array as any[]).map(row => this.formatResult<T>(row));
     } catch (error) {
       console.error('Async SELECT query failed:', sql, error);
       throw error;
@@ -136,7 +137,7 @@ export class DB {
   }
 
   static getOne<T>(sql: string, params: any[] = []): T | null {
-    const result = db.getFirstSync(sql, this.prepareParams(params));
+    const result = db.execute(sql, this.prepareParams(params)).rows._array[0];
     return result ? this.formatResult<T>(result) : null;
   }
 
@@ -145,7 +146,14 @@ export class DB {
   }
 
   static transaction(callback: () => void) {
-    db.withTransactionSync(callback);
+    db.execute('BEGIN;');
+    try {
+      callback();
+      db.execute('COMMIT;');
+    } catch (e) {
+      db.execute('ROLLBACK;');
+      throw e;
+    }
   }
 }
 

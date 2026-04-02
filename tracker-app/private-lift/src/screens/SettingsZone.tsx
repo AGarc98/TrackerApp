@@ -4,6 +4,7 @@ import { DB } from '../database/db';
 import { UserSettings, Routine } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
 import { RoutineSelector } from '../components/RoutineSelector';
+import { requestCalendarPermissions } from '../services/CalendarService';
 
 export const SettingsZone = () => {
   const { activeRoutineId, updateSettings, settings: contextSettings } = useWorkout();
@@ -140,7 +141,7 @@ export const SettingsZone = () => {
                   className={`flex-1 py-3 rounded-xl items-center ${contextSettings.theme === t ? 'bg-surface border border-border' : ''}`}
                 >
                   <Text className={`text-[10px] font-black uppercase tracking-widest ${contextSettings.theme === t ? 'text-primary' : 'text-text-muted'}`}>
-                    {t}
+                    {t === 'base' ? 'System' : t}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -184,7 +185,16 @@ export const SettingsZone = () => {
             </View>
             <Switch
               value={contextSettings.calendar_sync_enabled}
-              onValueChange={(v) => wrapUpdate({ calendar_sync_enabled: v })}
+              onValueChange={async (v) => {
+                if (v) {
+                  const granted = await requestCalendarPermissions();
+                  if (!granted) {
+                    Alert.alert('Permission Required', 'Enable calendar access in your device settings to use this feature.');
+                    return;
+                  }
+                }
+                wrapUpdate({ calendar_sync_enabled: v });
+              }}
               trackColor={{ false: '#e2e8f0', true: '#8B5CF6' }}
             />
           </View>

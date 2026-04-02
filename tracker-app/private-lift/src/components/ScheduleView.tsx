@@ -156,7 +156,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ activeRoutine, compl
 
   return (
     <View className="mb-8">
-      <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-6 mb-4">Deployment Schedule</Text>
+      <Text className="text-xs font-black text-text-muted uppercase tracking-[4px] ml-6 mb-4">This Week</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

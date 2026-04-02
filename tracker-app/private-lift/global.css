@@ -14,6 +14,8 @@
     --color-text-muted: #6B7280; /* Gray-500 */
     --color-border: #DDD6FE; /* Purple-200 */
     --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
   }
 
   .theme-light {
@@ -27,6 +29,8 @@
     --color-text-muted: #64748B; /* Slate-500 */
     --color-border: #E2E8F0; /* Slate-200 */
     --color-success: #22C55E;
+    --color-warning: #D97706;
+    --color-error: #DC2626;
   }
 
   .theme-dark {
@@ -40,5 +44,7 @@
     --color-text-muted: #94A3B8; /* Slate-400 */
     --color-border: #1E293B; /* Slate-800 */
     --color-success: #4ADE80;
+    --color-warning: #FBBF24;
+    --color-error: #F87171;
   }
 }

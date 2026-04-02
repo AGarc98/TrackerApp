@@ -44,7 +44,7 @@ export const BiometricsLogger = () => {
       setWeight('');
       setBodyFat('');
       Keyboard.dismiss();
-      Alert.alert('Logged', 'Biometrics vault updated.');
+      Alert.alert('Saved', 'Body measurements updated.');
     } catch (e) {
       console.error('Failed to log biometrics:', e);
       Alert.alert('Error', 'Failed to save biometrics.');
@@ -55,8 +55,8 @@ export const BiometricsLogger = () => {
     <View className="bg-surface rounded-[32px] p-8 mt-6 shadow-sm border border-border w-full">
       <View className="flex-row justify-between items-center mb-6">
         <View>
-          <Text className="text-xs font-black text-text-muted uppercase tracking-widest mb-1">Vault Biometrics</Text>
-          <Text className="text-xl font-black text-text-main tracking-tighter">Quick-Log</Text>
+          <Text className="text-xs font-black text-text-muted uppercase tracking-widest mb-1">Body Measurements</Text>
+          <Text className="text-xl font-black text-text-main tracking-tighter">Quick Log</Text>
         </View>
         {lastEntry && (
           <View className="items-end">
@@ -96,17 +96,17 @@ export const BiometricsLogger = () => {
           activeOpacity={0.8}
           className="bg-primary py-5 rounded-2xl items-center shadow-lg shadow-primary/20"
         >
-          <Text className="text-surface font-black uppercase tracking-widest text-xs">Commit Biometrics</Text>
+          <Text className="text-surface font-black uppercase tracking-widest text-xs">Log Weight</Text>
         </TouchableOpacity>
       </View>
 
       <View className="flex-row items-center justify-between border-t border-border pt-6">
         <View className="flex-1 mr-4">
-          <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Progress Snapshot</Text>
-          <Text className="text-xs text-text-muted font-medium leading-4">Capture current physiological state for analysis.</Text>
+          <Text className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Progress Photo</Text>
+          <Text className="text-xs text-text-muted font-medium leading-4">Take a photo to track your progress over time.</Text>
         </View>
         <TouchableOpacity 
-          onPress={() => Alert.alert('Camera Access', 'Scanning module coming soon to the field unit.')}
+          onPress={() => Alert.alert('Coming Soon', 'Progress photos are coming in a future update.')}
           className="w-14 h-14 bg-background rounded-2xl items-center justify-center border border-border shadow-sm"
         >
           <Text className="text-xl">📸</Text>

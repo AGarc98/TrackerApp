@@ -25,6 +25,8 @@ module.exports = {
         },
         border: "var(--color-border)",
         success: "var(--color-success)",
+        warning: "var(--color-warning)",
+        error: "var(--color-error)",
       }
     },
   },

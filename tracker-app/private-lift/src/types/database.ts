@@ -35,6 +35,8 @@ export enum MuscleGroup {
   // Core
   ABS = 'ABS',
   CORE = 'CORE',
+  OBLIQUES = 'OBLIQUES',
+  HIP_FLEXORS = 'HIP_FLEXORS',
   
   // Misc
   FULL_BODY = 'FULL_BODY',
@@ -197,6 +199,7 @@ export interface UserSettings {
   sync_history_limit_months: number;
   last_sync_timestamp: number | null;
   vault_connection_token: string | null;
+  onboarding_complete: boolean;
   last_modified: number;
 }
 

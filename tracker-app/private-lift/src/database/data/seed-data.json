@@ -344,6 +344,41 @@
       "muscle_groups": ["Triceps", "Chest"]
     },
     {
+      "id": "ex-skull-crushers",
+      "name": "Skull Crushers",
+      "description": "A lying EZ bar tricep extension lowering the bar towards the forehead, hitting all three tricep heads with a deep stretch.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Triceps"]
+    },
+    {
+      "id": "ex-preacher-curl",
+      "name": "Preacher Curl",
+      "description": "A bicep isolation exercise on a preacher bench that eliminates shoulder swing for strict, peak-focused bicep development.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Biceps"]
+    },
+    {
+      "id": "ex-dumbbell-flat-fly",
+      "name": "Dumbbell Flat Fly",
+      "description": "A chest isolation exercise lying flat on a bench with dumbbells, maximizing the stretch and contraction of the pectorals.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Chest", "Front Deltoids"]
+    },
+    {
+      "id": "ex-incline-dumbbell-fly",
+      "name": "Incline Dumbbell Fly",
+      "description": "Chest fly on an incline bench to target the upper pectorals with a deep stretch at the bottom.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Upper Chest", "Front Deltoids"]
+    },
+    {
+      "id": "ex-seated-calf-raise",
+      "name": "Seated Calf Raise",
+      "description": "Calf isolation on a seated machine with knees at 90 degrees, targeting the soleus — a distinct muscle from the gastrocnemius.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Calves"]
+    },
+    {
       "id": "ex-plank",
       "name": "Plank",
       "description": "Core stability exercise holding a push-up position on forearms.",
@@ -369,7 +404,77 @@
       "name": "Kettlebell Swing",
       "description": "An explosive hip hinge movement using a kettlebell for power and conditioning.",
       "type": "ENDURANCE",
-      "muscle_groups": ["Hamstrings", "Glutes", "Back", "Cardio"]
+      "muscle_groups": ["Hamstrings", "Glutes", "Upper Back", "Cardio"]
+    },
+    {
+      "id": "ex-barbell-front-squat",
+      "name": "Barbell Front Squat",
+      "description": "Squat variation with the barbell held in a front rack position, emphasizing the quadriceps and core stability.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads", "Core", "Upper Back"]
+    },
+    {
+      "id": "ex-sumo-deadlift",
+      "name": "Sumo Deadlift",
+      "description": "A wide-stance deadlift variation that targets the inner thighs and glutes while reducing lower back shear.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Hamstrings", "Glutes", "Adductors"]
+    },
+    {
+      "id": "ex-dumbbell-walking-lunge",
+      "name": "Dumbbell Walking Lunge",
+      "description": "Stepping forward into a lunge while holding dumbbells, focusing on unilateral leg strength and balance.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Quads", "Glutes", "Hamstrings"]
+    },
+    {
+      "id": "ex-single-leg-romanian-deadlift",
+      "name": "Single-Leg Romanian Deadlift",
+      "description": "A hinge movement performed on one leg to isolate the posterior chain and improve hip stability.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Hamstrings", "Glutes", "Core"]
+    },
+    {
+      "id": "ex-barbell-hip-thrust",
+      "name": "Barbell Hip Thrust",
+      "description": "A glute-dominant compound movement performed with the upper back on a bench and a barbell across the hips.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Glutes", "Hamstrings"]
+    },
+    {
+      "id": "ex-t-bar-row",
+      "name": "T-Bar Row",
+      "description": "A heavy rowing variation using a landmine or dedicated machine to build mid-back thickness.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Mid-Back", "Lats", "Biceps"]
+    },
+    {
+      "id": "ex-straight-arm-lat-pulldown",
+      "name": "Straight Arm Lat Pulldown",
+      "description": "Isolation exercise using a cable to target the lats through a full range of motion without bicep involvement.",
+      "type": "STRENGTH",
+      "muscle_groups": ["Lats", "Triceps"]
+    },
+    {
+      "id": "ex-hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "description": "Hanging from a bar and raising legs to target the lower abdominals and improve grip strength.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Abs", "Hip Flexors", "Forearms"]
+    },
+    {
+      "id": "ex-pallof-press",
+      "name": "Pallof Press",
+      "description": "An anti-rotation core exercise using a cable or band held at chest height while resisting lateral tension.",
+      "type": "ISOMETRIC",
+      "muscle_groups": ["Core", "Obliques"]
+    },
+    {
+      "id": "ex-russian-twists",
+      "name": "Russian Twists",
+      "description": "A rotational core movement performed while seated to target the obliques.",
+      "type": "BODYWEIGHT",
+      "muscle_groups": ["Obliques", "Abs"]
     }
   ],
   "workouts": [
@@ -541,6 +646,42 @@
         { "exercise_id": "ex-machine-hip-abductor", "target_sets": 4, "target_reps": 8 },
         { "exercise_id": "ex-standing-calf-raise", "target_sets": 4, "target_reps": 10 }
       ]
+    },
+    {
+      "id": "bodyweight-warrior",
+      "name": "Bodyweight Essentials",
+      "description": "A high-intensity session requiring zero equipment, perfect for travel or home.",
+      "exercises": [
+        { "exercise_id": "ex-push-up", "target_sets": 4, "target_reps": 15 },
+        { "exercise_id": "ex-bulgarian-split-squat", "target_sets": 4, "target_reps": 12 },
+        { "exercise_id": "ex-plank", "target_sets": 3, "target_time_ms": 60000 },
+        { "exercise_id": "ex-burpees", "target_sets": 3, "target_reps": 15 },
+        { "exercise_id": "ex-hanging-leg-raise", "target_sets": 3, "target_reps": 12 }
+      ]
+    },
+    {
+      "id": "posterior-engine",
+      "name": "Hinge & Glute Focus",
+      "description": "Focuses on the backside of the body to balance out squat-heavy programs.",
+      "exercises": [
+        { "exercise_id": "ex-romanian-deadlift", "target_sets": 4, "target_reps": 8 },
+        { "exercise_id": "ex-barbell-hip-thrust", "target_sets": 4, "target_reps": 10 },
+        { "exercise_id": "ex-seated-hamstring-curl", "target_sets": 4, "target_reps": 12 },
+        { "exercise_id": "ex-machine-hip-abductor", "target_sets": 3, "target_reps": 15 },
+        { "exercise_id": "ex-kettlebell-swing", "target_sets": 3, "target_reps": 20 }
+      ]
+    },
+    {
+      "id": "full-body-burn",
+      "name": "Full Body Metabolic",
+      "description": "A circuit-style workout to increase heart rate and hit every major muscle group.",
+      "exercises": [
+        { "exercise_id": "ex-barbell-deadlift", "target_sets": 3, "target_reps": 5 },
+        { "exercise_id": "ex-machine-chest-press", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-lat-pulldown", "target_sets": 3, "target_reps": 10 },
+        { "exercise_id": "ex-dumbbell-walking-lunge", "target_sets": 3, "target_reps": 12 },
+        { "exercise_id": "ex-kettlebell-swing", "target_sets": 3, "target_reps": 15 }
+      ]
     }
   ],
   "routines": [
@@ -549,7 +690,7 @@
       "name": "The Aesthetic Architect",
       "description": "The ultimate 5-day traditional bodybuilding split. Perfect for those wanting to sculpt a classic physique.",
       "mode": "WEEKLY",
-      "duration": 7,
+      "duration": 12,
       "workouts": [
         { "workout_id": "chest-focus", "day_of_week": 1 },
         { "workout_id": "back-focus", "day_of_week": 2 },
@@ -563,11 +704,11 @@
       "name": "The High-Performance Minimalist",
       "description": "Maximum results in minimum time using antagonist training. Ideal for busy professionals.",
       "mode": "ASYNC",
-      "duration": 7,
+      "duration": 4,
       "workouts": [
-        { "workout_id": "upper-antagonist", "day_of_week": 1 },
-        { "workout_id": "accessory-antagonist", "day_of_week": 3 },
-        { "workout_id": "universal-legs", "day_of_week": 5 }
+        { "workout_id": "upper-antagonist" },
+        { "workout_id": "accessory-antagonist" },
+        { "workout_id": "universal-legs" }
       ]
     },
     {
@@ -575,7 +716,7 @@
       "name": "The Elite Push-Pull-Legs Protocol",
       "description": "The gold standard of modern training. Targets every muscle group twice a week.",
       "mode": "WEEKLY",
-      "duration": 7,
+      "duration": 8,
       "workouts": [
         { "workout_id": "push-a", "day_of_week": 1 },
         { "workout_id": "pull-a", "day_of_week": 2 },
@@ -583,6 +724,31 @@
         { "workout_id": "push-b", "day_of_week": 4 },
         { "workout_id": "pull-b", "day_of_week": 5 },
         { "workout_id": "legs-b", "day_of_week": 6 }
+      ]
+    },
+    {
+      "id": "functional-traveler-3day",
+      "name": "The Nomad Protocol",
+      "description": "3-day rotating maintenance program. Sessions 1-2 are zero-equipment bodyweight training. Session 3 (Full Body Metabolic) introduces a barbell, kettlebell, and machines for a full-effort conditioning finisher.",
+      "mode": "ASYNC",
+      "duration": 4,
+      "workouts": [
+        { "workout_id": "bodyweight-warrior" },
+        { "workout_id": "bodyweight-warrior" },
+        { "workout_id": "full-body-burn" }
+      ]
+    },
+    {
+      "id": "power-hypertrophy-4day",
+      "name": "The Silver Era 4-Day",
+      "description": "An Upper/Lower split that balances heavy strength days with hypertrophy-focused days.",
+      "mode": "WEEKLY",
+      "duration": 8,
+      "workouts": [
+        { "workout_id": "push-a", "day_of_week": 1 },
+        { "workout_id": "legs-a", "day_of_week": 2 },
+        { "workout_id": "pull-a", "day_of_week": 4 },
+        { "workout_id": "posterior-engine", "day_of_week": 5 }
       ]
     }
   ]
