@@ -57,7 +57,7 @@ const START_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const ArchitectZone = () => {
-  const { setActiveRoutine, activeRoutineId } = useWorkout();
+  const { setActiveRoutine, activeRoutineId, settings } = useWorkout();
   const [activeSubTab, setActiveSubTab] = useState<'routines' | 'workouts' | 'exercises'>('routines');
   const [exercises, setExercises] = useState<ExerciseWithMuscle[]>([]);
   const [days, setDays] = useState<UIWorkout[]>([]);
@@ -371,7 +371,7 @@ export const ArchitectZone = () => {
         return;
       }
 
-      const bundle = { bundle_version: 1, routine, routine_workouts: mappings, workouts, exported_at: Date.now() };
+      const bundle = { bundle_version: 1, routine, routine_workouts: mappings, workouts, exported_at: Date.now(), exported_by: settings?.user_name ?? null };
       const json = JSON.stringify(bundle, null, 2);
       setExportJSON(json);
       setExportModalVisible(true);
@@ -488,6 +488,7 @@ export const ArchitectZone = () => {
   // Step 2: execute the import once strategy is chosen
   const executeImport = (bundle: any, strategy: ImportStrategy) => {
     const { routine, routine_workouts, workouts } = bundle;
+    const importSuffix = bundle.exported_by ? `from ${bundle.exported_by}` : 'Imported';
     const lastModified = Date.now();
     let savedRoutineName = routine.name;
 
@@ -507,7 +508,7 @@ export const ArchitectZone = () => {
             DB.run('DELETE FROM Workout_Exercises WHERE workout_id = ?;', [finalWorkoutId]);
           } else {
             finalWorkoutId = Math.random().toString(36).substring(2, 15);
-            const finalName = existingWorkout ? `${workout.name} (Imported)` : workout.name;
+            const finalName = existingWorkout ? `${workout.name} (${importSuffix})` : workout.name;
             DB.run('INSERT INTO Workouts (id, name, description, last_modified) VALUES (?, ?, ?, ?);',
               [finalWorkoutId, finalName, workout.description || null, lastModified]);
           }
@@ -533,7 +534,7 @@ export const ArchitectZone = () => {
                   // Different type conflict — create a copy with suffixed name
                   finalExId = Math.random().toString(36).substring(2, 15);
                   DB.run('INSERT INTO Exercises (id, name, description, type, default_rest_duration, last_modified) VALUES (?, ?, ?, ?, ?, ?);',
-                    [finalExId, `${ex.name} (Imported)`, ex.description || null, ex.type, ex.default_rest_duration || 90, lastModified]);
+                    [finalExId, `${ex.name} (${importSuffix})`, ex.description || null, ex.type, ex.default_rest_duration || 90, lastModified]);
                 }
               }
             } else {
@@ -570,7 +571,7 @@ export const ArchitectZone = () => {
           DB.run('DELETE FROM Routine_Workouts WHERE routine_id = ?;', [finalRoutineId]);
         } else {
           finalRoutineId = Math.random().toString(36).substring(2, 15);
-          const finalName = existingRoutine ? `${routine.name} (Imported)` : routine.name;
+          const finalName = existingRoutine ? `${routine.name} (${importSuffix})` : routine.name;
           savedRoutineName = finalName;
           DB.run('INSERT INTO Routines (id, name, description, mode, duration, start_day_index, cycle_count, last_modified) VALUES (?, ?, ?, ?, ?, ?, 0, ?);',
             [finalRoutineId, finalName, routine.description || null, routine.mode, routine.duration, routine.start_day_index ?? 0, lastModified]);

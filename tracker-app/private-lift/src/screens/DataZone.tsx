@@ -213,6 +213,71 @@ export const DataZone = () => {
     );
   }, [selectedWeeks]);
 
+  // ─── Biometrics ─────────────────────────────────────────────────────────
+
+  type BioMetric = 'WEIGHT' | 'BODY_FAT';
+  const [selectedBioMetric, setSelectedBioMetric] = useState<BioMetric>('WEIGHT');
+
+  const bioChartData = useMemo(() => {
+    const since = Date.now() - selectedWeeks * 7 * 24 * 60 * 60 * 1000;
+    const rows = DB.getAll<{ measured_at: number; body_weight: number | null; body_fat_pct: number | null }>(
+      'SELECT measured_at, body_weight, body_fat_pct FROM User_Biometrics WHERE measured_at >= ? ORDER BY measured_at ASC;',
+      [since]
+    );
+
+    // Bucket readings by Monday-anchored week
+    const weekMap = new Map<string, { weight: number[]; fat: number[] }>();
+    for (const row of rows) {
+      const d = new Date(row.measured_at);
+      const diffToMon = (d.getDay() + 6) % 7;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - diffToMon);
+      monday.setHours(0, 0, 0, 0);
+      const key = monday.toISOString().split('T')[0];
+      if (!weekMap.has(key)) weekMap.set(key, { weight: [], fat: [] });
+      const bucket = weekMap.get(key)!;
+      if (row.body_weight != null) bucket.weight.push(row.body_weight);
+      if (row.body_fat_pct != null) bucket.fat.push(row.body_fat_pct);
+    }
+
+    // Build full week range
+    const sinceDate = new Date(since);
+    const diffToMon = (sinceDate.getDay() + 6) % 7;
+    sinceDate.setDate(sinceDate.getDate() - diffToMon);
+    sinceDate.setHours(0, 0, 0, 0);
+
+    const avg = (vals: number[]) => vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const weeks: { weekStart: string; avgWeight: number | null; avgFat: number | null }[] = [];
+    const cursor = new Date(sinceDate);
+    while (cursor.getTime() <= Date.now()) {
+      const key = cursor.toISOString().split('T')[0];
+      const bucket = weekMap.get(key);
+      weeks.push({ weekStart: key, avgWeight: bucket ? avg(bucket.weight) : null, avgFat: bucket ? avg(bucket.fat) : null });
+      cursor.setDate(cursor.getDate() + 7);
+    }
+    return weeks;
+  }, [selectedWeeks]);
+
+  const bioValues = useMemo(
+    () => bioChartData.map(w => selectedBioMetric === 'WEIGHT' ? w.avgWeight : w.avgFat),
+    [bioChartData, selectedBioMetric],
+  );
+  const bioMax = useMemo(() => Math.max(...bioValues.filter((v): v is number => v != null), 1), [bioValues]);
+  const bioMin = useMemo(() => {
+    const nonNull = bioValues.filter((v): v is number => v != null);
+    return nonNull.length > 0 ? Math.min(...nonNull) : 0;
+  }, [bioValues]);
+  const bioLatest = useMemo(() => {
+    const vals = bioValues.filter((v): v is number => v != null);
+    return vals.length > 0 ? vals[vals.length - 1] : null;
+  }, [bioValues]);
+  const bioTrend = useMemo(() => {
+    const vals = bioValues.filter((v): v is number => v != null);
+    if (vals.length < 2) return null;
+    return ((vals[vals.length - 1] - vals[0]) / vals[0]) * 100;
+  }, [bioValues]);
+  const bioHasData = bioValues.some(v => v != null);
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   if (isLoading && data.length === 0) {
@@ -542,6 +607,114 @@ export const DataZone = () => {
                 <Text className="text-xl">📈</Text>
               </View>
             </View>
+          </View>
+        </View>
+
+        {/* ── Body Composition ── */}
+        <View className="px-6 mt-8">
+          <Text className="text-text-main font-black text-xl mb-4 tracking-tighter">Body Composition</Text>
+
+          {/* Metric toggle */}
+          <View className="flex-row items-center justify-between mb-6">
+            <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Metric</Text>
+            <View className="flex-row bg-surface p-1 rounded-xl border border-border">
+              {([{ key: 'WEIGHT', label: `Weight (${weightUnit})` }, { key: 'BODY_FAT', label: 'Body Fat %' }] as { key: BioMetric; label: string }[]).map(m => (
+                <TouchableOpacity
+                  key={m.key}
+                  onPress={() => setSelectedBioMetric(m.key)}
+                  className={`px-4 py-2.5 rounded-lg ${selectedBioMetric === m.key ? 'bg-background' : ''}`}
+                >
+                  <Text className={`font-black text-xs ${selectedBioMetric === m.key ? 'text-text-main' : 'text-text-muted'}`}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Chart card */}
+          <View className="bg-surface rounded-[40px] p-8 border border-border shadow-sm mb-4">
+            {/* Header */}
+            <View className="flex-row justify-between items-center mb-6">
+              <View>
+                <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-1">
+                  {selectedBioMetric === 'WEIGHT' ? `Body Weight` : 'Body Fat'}
+                </Text>
+                {bioLatest != null ? (
+                  <View className="flex-row items-center">
+                    <Text className="text-2xl font-black text-text-main">
+                      {bioLatest.toFixed(1)}
+                      <Text className="text-xs text-text-muted">{selectedBioMetric === 'WEIGHT' ? ` ${weightUnit}` : '%'}</Text>
+                    </Text>
+                    {bioTrend != null && (
+                      <View className={`ml-3 px-2 py-1 rounded-lg ${bioTrend <= 0 && selectedBioMetric === 'WEIGHT' ? 'bg-success/10' : bioTrend > 0 && selectedBioMetric === 'WEIGHT' ? 'bg-accent/10' : bioTrend <= 0 ? 'bg-success/10' : 'bg-accent/10'}`}>
+                        <Text className={`text-[10px] font-black ${bioTrend <= 0 && selectedBioMetric === 'WEIGHT' ? 'text-success' : bioTrend > 0 && selectedBioMetric === 'WEIGHT' ? 'text-accent' : bioTrend <= 0 ? 'text-success' : 'text-accent'}`}>
+                          {bioTrend > 0 ? '+' : ''}{bioTrend.toFixed(1)}%
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text className="text-2xl font-black text-text-muted">—</Text>
+                )}
+              </View>
+              <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest">Latest</Text>
+            </View>
+
+            {/* Bars */}
+            {!bioHasData ? (
+              <View className="h-40 items-center justify-center">
+                <Text className="text-text-muted font-black text-xs uppercase tracking-widest text-center">
+                  No readings logged{'\n'}for this period
+                </Text>
+                <Text className="text-text-muted text-[10px] mt-2 text-center">Log body measurements on the Train tab</Text>
+              </View>
+            ) : (
+              <View className="flex-row justify-between items-end mb-6 px-2" style={{ height: CHART_HEIGHT + 24 }}>
+                {bioChartData.map((point, index) => {
+                  const val = selectedBioMetric === 'WEIGHT' ? point.avgWeight : point.avgFat;
+                  // Scale within the range so differences are visible
+                  const range = bioMax - bioMin || 1;
+                  const barHeight = val != null
+                    ? Math.max(((val - bioMin) / range) * (CHART_HEIGHT * 0.7) + CHART_HEIGHT * 0.1, 8)
+                    : 4;
+                  const showLabel = index === 0 || index === bioChartData.length - 1 || (selectedWeeks <= 8 && index % 2 === 0);
+                  return (
+                    <View key={point.weekStart} className="flex-1 items-center justify-end" style={{ height: CHART_HEIGHT + 24 }}>
+                      <View
+                        className={`w-3 rounded-full ${val != null ? 'bg-accent' : 'bg-border/30'}`}
+                        style={{ height: barHeight }}
+                      />
+                      {showLabel && (
+                        <Text className="text-[7px] font-black text-text-muted mt-2 rotate-45 origin-left">
+                          {point.weekStart.split('-').slice(1).join('/')}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Stats row */}
+            {bioHasData && (
+              <View className="flex-row justify-between border-t border-border pt-5">
+                <View className="items-center">
+                  <Text className="text-text-muted font-black text-[9px] uppercase tracking-widest mb-1">Min</Text>
+                  <Text className="text-text-main font-black text-sm">{bioMin.toFixed(1)}</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-text-muted font-black text-[9px] uppercase tracking-widest mb-1">Max</Text>
+                  <Text className="text-text-main font-black text-sm">{bioMax.toFixed(1)}</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-text-muted font-black text-[9px] uppercase tracking-widest mb-1">Change</Text>
+                  <Text className={`font-black text-sm ${bioTrend == null ? 'text-text-muted' : bioTrend <= 0 && selectedBioMetric === 'WEIGHT' ? 'text-success' : bioTrend > 0 && selectedBioMetric === 'WEIGHT' ? 'text-accent' : bioTrend <= 0 ? 'text-success' : 'text-accent'}`}>
+                    {bioTrend != null ? `${bioTrend > 0 ? '+' : ''}${bioTrend.toFixed(1)}%` : '—'}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
