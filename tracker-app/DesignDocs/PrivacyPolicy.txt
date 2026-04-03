@@ -1,0 +1,178 @@
+PrivateLift — Privacy Policy
+Last updated: April 2, 2026
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The Short Version
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift does not collect your data. Everything you enter — your workouts, sessions,
+body measurements, and progress photos — is stored exclusively on your device. Nothing
+is sent to us, to a cloud server, or to any third party. We have no servers that hold
+your information because we have no way to receive it in the first place.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Who We Are
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift is an independent fitness tracking application. For questions about this
+policy, you can contact us at: [contact@yourdomain.com]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. What Data the App Stores — and Where
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift stores all of the following locally on your device in a SQLite database.
+This data never leaves your device unless you explicitly choose to export or sync it
+(see Sections 4 and 5).
+
+  Training Data
+    - Exercises you create or edit (name, type, muscle groups, rest duration)
+    - Workouts and routines you build
+    - Session logs: dates, sets, reps, weight, distance, time, and notes
+    - Per-session perceived exertion (RPE) ratings
+
+  Body Measurements
+    - Body weight entries
+    - Body fat percentage entries (optional)
+    - Progress photos, if you choose to save them. Photos are stored as files on your
+      device's local filesystem and are never transmitted anywhere.
+
+  Preferences
+    - Your display name (optional)
+    - App settings: weight unit, theme, rest timer configuration, and similar preferences
+    - Active routine selection
+
+We do not collect any information that could identify you as a person — no name tied
+to an account, no email address, no device identifiers, and no location data.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. What We Do NOT Collect
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We do not collect, transmit, or have access to any of the following:
+
+  - Your name, email address, or any account credentials
+    (PrivateLift has no account system and requires no sign-up)
+  - Your location or GPS data
+  - Your device identifiers (IDFA, IDFV, Android Advertising ID, or similar)
+  - Usage analytics or behavioral tracking of any kind
+  - Crash reports sent to a remote server
+  - Any data for advertising purposes
+  - Any biometric data beyond what you voluntarily enter into the app
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. Optional Feature: Calendar Sync
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift can optionally create calendar events in your device's system calendar when
+you finish a training session. This feature is:
+
+  - Disabled by default
+  - Only activated if you explicitly turn it on in Settings
+  - Requires your permission to access the system calendar, which your device will
+    prompt you to grant
+
+When enabled, PrivateLift writes session events to your local system calendar. It does
+not read any existing calendar events, and it does not sync your calendar data anywhere.
+Your calendar data remains under the control of whatever calendar provider you use on
+your device (e.g., Apple Calendar, Google Calendar). We are not responsible for how
+those third-party providers handle your data.
+
+You can disable Calendar Sync at any time in Settings.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. Optional Feature: Desktop Sync
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift offers an optional sync with the companion PrivateLift desktop application.
+When used:
+
+  - The connection is established exclusively over your local Wi-Fi network (LAN).
+    No data is routed through the internet or any external server.
+  - The sync is authenticated by a short-lived token that you manually enter or scan
+    from your desktop. The token expires after each use.
+  - Your training data is transferred directly from your phone to your own desktop
+    computer and is stored only there.
+
+This feature is entirely opt-in and requires you to own and operate the desktop
+application. We never have access to data transmitted during a sync.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. Data Export and Backup
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift allows you to export your data as an encrypted backup archive and to import
+it to restore your data. When you export:
+
+  - The archive is saved to your device's local storage.
+  - You may optionally encrypt it with a passkey of your choosing using AES-256 encryption.
+  - We never receive, see, or have access to your export files.
+
+You are responsible for the security of any backup files you create and where you
+choose to store or transfer them.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. Third-Party Services & SDKs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift does not integrate any third-party advertising networks, analytics platforms,
+or data brokers. We do not use any SDKs that collect data about you or your device for
+purposes beyond the core functionality of the app.
+
+The app is distributed through the Apple App Store and/or Google Play Store. Those
+platforms may collect their own data (such as download counts and crash reports) under
+their own privacy policies. We encourage you to review Apple's and Google's privacy
+policies separately.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. Children's Privacy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PrivateLift is not directed at children under the age of 13 (or the applicable age of
+digital consent in your jurisdiction). Because the app does not collect any personal
+data from anyone, it does not knowingly collect data from children either. If you are
+under 13, please do not use this app without parental supervision.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. Your Rights and Data Deletion
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Because all your data is stored locally on your own device, you are in complete control
+of it at all times. You can:
+
+  - View all your data within the app at any time
+  - Export your data at any time from Settings
+  - Delete individual sessions, exercises, routines, or biometric entries from within
+    the app
+  - Delete all data by uninstalling the app or using the "Restore" function with a
+    blank state
+
+We hold no copies of your data, so there is nothing for us to delete on our end. If you
+uninstall the app and delete any backup files you created, your data is gone entirely.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. Changes to This Policy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If we make material changes to this privacy policy, we will update the "Last updated"
+date at the top of this document. Because we do not have your contact information, we
+cannot notify you directly. We encourage you to review this policy periodically. The
+current version is always available at [https://yourdomain.com/privacy].
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. Contact
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have questions about this privacy policy, please contact:
+  [contact@yourdomain.com]

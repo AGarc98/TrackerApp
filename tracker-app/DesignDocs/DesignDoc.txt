@@ -1,59 +1,424 @@
-🏗️ PrivateLift: System Design Document (v1.1)
-1. System Architecture: The "Central Hub" Model
-To support your vision of the desktop as a high-capacity storage vault, the architecture transitions from a simple peer-to-peer sync to a Primary/Secondary synchronization model.
-Desktop (The Vault): Acts as the master repository. It handles long-term storage of high-resolution progress photos and the full historical archive.
-Mobile (The Field Unit): Optimized for performance and immediate data entry. It can hold a subset of data (e.g., the last 6 months) or the full set, depending on user preference.
-Two-Way Sync: * Discovery: Desktop app displays a QR code containing its local IP and a session token.
-Protocol: Mobile scans and initiates a WebSocket or REST over LAN connection.
-Conflict Resolution: "Last Write Wins" based on a last_modified timestamp column in every table.
+PrivateLift: Mobile App — System Design Document (v2.0)
 
-2. Updated Database Schema
-We are adding muscle group categorization and "Base Content" flags to support the pre-populated library.
-2.1 Enums & New Columns
-Muscle_Group (Enum): CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, LEGS_QUADS, LEGS_HAMS, CALVES, CORE, CARDIO.
-Table: Exercises
-muscle_group: Enum (Mandatory).
-is_base_content: Boolean (True for app-provided exercises; prevents accidental deletion).
-last_modified: Timestamp (For sync logic).
-Table: User_Biometrics
-photo_path: Local URI (Standard filesystem access).
-2.2 Seeding Logic
-On the first launch (Initial Boot), the app executes a seed.sql script. This populates the Exercises and Routines tables with a "Solid Base" (e.g., PPL, Upper/Lower, 5x5) so the user isn't starting with a blank slate.
+This document reflects the shipped v1.0 implementation of the React Native mobile application.
+A companion desktop app (Tauri) is designed separately in DesktopDesign.txt.
 
-3. UI/UX Segmentation: Tracker vs. Architect
-To maintain a clean "Gym Floor" experience, the app is split into two distinct functional zones.
-3.1 The "Athlete" Zone (Primary Tracking)
-Focus: Speed and low friction.
-Views: Today’s Workout, Active Session (The Engine), and Quick-Log Biometrics.
-UI: Large touch targets, minimal text entry, high contrast for gym environments.
-3.2 The "Architect" Zone (Management)
-Focus: Customization and granular control.
-Access: A dedicated "Management" or "Library" tab.
-Functionality: * Exercise Editor: Add/Edit muscle groups, descriptions, and type enums.
-Routine Builder: Drag-and-drop interface to sequence workouts into "Cycles."
-Sync Dashboard: Manage connections to the Desktop vault.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Overview
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-4. Advanced Analytics Engine
-The analytics module will move beyond simple graphs into a Configurable Data Grid (Pivot Table style).
-4.1 The Pivot Logic
-The user can "Group By" and "Filter By" three main dimensions:
-Temporal: View by Day, Week, Month, or Cycle.
-Anatomical: Filter performance by Muscle Group (e.g., "Show me total volume for BACK this month").
-Specific: Filter by individual Exercise (e.g., "Show me 1RM progression for Deadlift").
-4.2 Key Metrics Calculated:
-Volume Load: (Sets × Reps × Weight).
-Intensity: Average % of e1RM used per session.
-Frequency: Days trained per muscle group over a rolling 30-day window.
+PrivateLift is a privacy-first, local-only fitness tracker built for performance-oriented users.
+All data is stored on-device via SQLite. There is no cloud dependency, no telemetry, and no
+account required. The app is structured around four functional Zones accessed via a bottom
+tab navigator, plus an Onboarding screen shown on first launch.
 
-5. Data Portability & Photos
-5.1 Storage Logic
-Progress Photos: Stored in a standard PrivateLift/Media/ folder in the user's Documents/Files directory. No obfuscation is applied, allowing users to move them manually if desired.
-Export/Import: * The app generates a .zip (or .plift) container.
-Contents: data.json (SQL Dump) + media/ (All photos).
-Encryption: The entire container is encrypted with AES-256 if the user provides a passkey at the time of export.
 
-6. Technical Implementation Details
-Desktop Navigation: Horizontal Top Nav or Permanent Sidebar for the "Architect" pages to utilize the wider aspect ratio.
-Mobile UI: Tab-based navigation with a prominent "Start" button.
-Sync Security: Since it's Wi-Fi based, the app will check if the SSID is "Private" before allowing a handshake, or simply rely on the QR code's unique session token.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. Tech Stack
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+Platform:         React Native (iOS / Android)
+Language:         TypeScript (Strict Mode)
+Styling:          NativeWind v4 (Tailwind CSS for React Native)
+Database:         react-native-quick-sqlite (synchronous SQLite)
+State:            React Context API (WorkoutContext)
+Calendar:         System calendar integration via CalendarService (permission-gated)
+Icons:            react-native-vector-icons
+
+Directory structure:
+  /src/components   — BiometricsLogger, ExerciseSelector, RoutineSelector,
+                      ScheduleView, WorkoutSelector, AppLogo
+  /src/screens      — AthleteZone, ArchitectZone, DataZone, SettingsZone,
+                      OnboardingScreen
+  /src/database     — schema.ts, db.ts, seed.ts, data/seed-data.json
+  /src/hooks        — useAnalytics, useRestTimer
+  /src/store        — WorkoutContext
+  /src/types        — database.ts (all interfaces and enums)
+  /src/services     — CalendarService
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. Navigation & Zone Architecture
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3.1 Athlete Zone  (The Gym Floor — Primary Tab)
+───────────────────────────────────────────────
+Default landing view. Optimized for speed and low friction during an active training session.
+Large touch targets, minimal text entry, high contrast.
+
+Idle State (no active session):
+  - Displays today's scheduled workout from the active routine (or the next in the async queue)
+  - "Start" button launches the active session engine
+  - Quick-access Biometrics Logger component (body weight + body fat %)
+  - Schedule View component showing the current week or async queue at a glance
+  - Settings shortcut and "Training" pill indicator in the header
+
+Active Session Engine:
+  - Exercises displayed in order with input fields appropriate to the exercise type
+  - Set types: WARMUP, WORKING, DROPSET, FAILURE
+    * WARMUP sets are tracked in history but excluded from all analytics volume calculations
+  - SuperSet support: exercises sharing a superset_id are rendered grouped together
+  - Exercise-level swap: replace any exercise for this session only; does not affect the routine
+  - Workout-level swap: swap today's workout with another in the active routine
+    * Stored as a JSON blob (pending_swap) in Active_Session; committed to
+      Routine_Cycle_Overrides only on session finish to preserve schedule integrity if
+      the app crashes or the user discards
+  - Rest Timer:
+    * Per-exercise default (Exercise.default_rest_duration), falls back to the user's global
+      default (User_Settings.default_rest_duration)
+    * Per-workout override also available (Workout_Exercises.rest_period_override)
+    * Optional auto-start after each set, sound alert, and haptic feedback on expiry
+  - Per-set notes field available on each set row
+  - Session finish: user inputs an RPE (1–10) and optional session notes before completing
+
+Crash Recovery:
+  - Every set log immediately serializes all draft state to Active_Session.draft_data (JSON)
+  - On app restart with an Active_Session record present, the user is prompted to
+    Resume or Discard
+  - Finish commits draft_data atomically into Logged_Sessions + Logged_Sets in a single
+    SQLite transaction, then deletes the Active_Session record
+
+3.2 Architect Zone  (The Design Studio)
+───────────────────────────────────────
+Content management and program building. Three sub-tabs: Routines | Workouts | Exercises.
+
+Exercises Tab:
+  - Searchable list with muscle group filter
+  - Create / Edit: name, type (ExerciseType), primary + secondary muscle groups
+    (via Exercise_Muscle_Groups), default rest duration (seconds)
+
+Workouts Tab:
+  - List of all workout "days" (e.g., "Heavy Pull A", "Lower — Volume")
+  - Create / Edit: name, description, estimated duration, ordered exercise list
+  - Per-exercise slot: target sets, target reps, target weight, target time (ms),
+    target distance, rest override (seconds), optional superset group ID
+
+Routines Tab:
+  - List of all routines with cycle progress badge
+  - Create / Edit mode and duration:
+      WEEKLY — Map workouts to specific days (Mon–Sun). Supports A/B week alternation
+               via week_number on Routine_Workouts (0 = Week A, 1 = Week B).
+               Configurable start_day_index for which weekday begins the training week.
+      ASYNC  — Sequential queue; completing all workouts in the sequence = one cycle.
+               cycle_count tracks progress toward the routine's planned duration.
+  - Per-routine JSON import/export: bundles the routine, its workouts, exercises, and
+    muscle group assignments into a single JSON file. Compatible with desktop import.
+    Conflict resolution on import: Replace or Duplicate strategy for name collisions.
+
+3.3 Data Zone  (Analytics)
+────────────────────────────
+Filter Dimensions:
+  - Muscle Group: Hierarchical picker organized by anatomical category (see enum in §5).
+    Each top-level category expands to reveal sub-groups for drill-down.
+  - Exercise: Optionally narrow to a specific exercise within the selected muscle group.
+  - Timeframe: 4 | 8 | 12 | 24 weeks (rolling, Monday-anchored week buckets).
+
+Metrics (switchable per chart view):
+  - SETS    — Primary working sets per week; secondary sets shown as a muted layer
+  - E1RM    — Peak estimated 1-Rep Max per week (Epley formula: weight × (1 + reps/30))
+  - LOAD    — Average weight across working sets per week
+  - DISTANCE— Total distance per week (endurance exercises)
+  - TIME    — Total time per week in milliseconds (endurance / isometric exercises)
+  - RPE     — Average session RPE per week (sessions averaged first, then the week)
+
+Period Comparison:
+  The selected N-week window is compared against the immediately preceding N-week window.
+  All metrics report a % change indicator.
+
+Chart: Custom bar chart rendered inline (no third-party charting library).
+Export: Filtered data available as CSV export.
+
+3.4 Settings Zone
+──────────────────
+  - Active Routine: Shows the current routine name, mode badge, and cycle progress bar.
+    "Select" opens the routine picker modal.
+  - Profile: User name text field.
+  - Preferences: Theme (System / Light / Dark), weight unit (KG / LBS),
+    distance unit (KM / MI).
+  - Calendar Sync: Logs finished sessions as events in the system calendar.
+    Requests OS permission on first enable.
+  - Sync History Limit: Number of months of history to include when syncing to the
+    desktop vault.
+  - Keep Screen On: Prevents device sleep during training.
+  - Rest Timer: Enable / disable, sound alert, haptic feedback, auto-start toggle,
+    default duration in seconds. Per-exercise overrides honored at session time.
+  - Desktop Sync: Connection token field for LAN authentication with the companion
+    Tauri desktop app. [Stub — full sync protocol implemented in desktop cycle]
+  - Full Backup: Export all sessions, biometrics, routines, and settings as an
+    AES-256 encrypted archive. Restore from backup overwrites all local data.
+    [Partially stubbed — UI present; AES-256 encryption and file picker pending v1.1]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. Database Schema (SQLite)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All tables carry last_modified INTEGER (epoch ms) for future sync conflict resolution.
+All IDs are client-generated UUIDs (TEXT).
+
+4.1 Exercise Tables
+
+  Exercises
+    id                    TEXT PRIMARY KEY
+    name                  TEXT NOT NULL
+    description           TEXT
+    type                  TEXT NOT NULL          -- ExerciseType enum
+    default_rest_duration INTEGER DEFAULT 90     -- Seconds
+    last_modified         INTEGER NOT NULL
+
+  Exercise_Muscle_Groups
+    id            TEXT PRIMARY KEY
+    exercise_id   TEXT FK → Exercises (CASCADE DELETE)
+    muscle_group  TEXT NOT NULL                  -- MuscleGroup enum
+    is_primary    INTEGER DEFAULT 1              -- 1 = primary mover, 0 = secondary
+    last_modified INTEGER NOT NULL
+
+4.2 Workout Tables
+
+  Workouts
+    id                 TEXT PRIMARY KEY
+    name               TEXT NOT NULL
+    description        TEXT
+    estimated_duration INTEGER                   -- Minutes
+    last_modified      INTEGER NOT NULL
+
+  Workout_Exercises
+    id                  TEXT PRIMARY KEY
+    workout_id          TEXT FK → Workouts (CASCADE DELETE)
+    exercise_id         TEXT FK → Exercises (CASCADE DELETE)
+    superset_id         TEXT                     -- Groups exercises; NULL if standalone
+    order_index         INTEGER NOT NULL
+    target_sets         INTEGER NOT NULL
+    target_reps         INTEGER
+    target_weight       REAL
+    target_time_ms      INTEGER
+    target_distance     REAL
+    rest_period_override INTEGER                 -- Seconds; overrides Exercise default
+    last_modified       INTEGER NOT NULL
+
+4.3 Routine Tables
+
+  Routines
+    id               TEXT PRIMARY KEY
+    name             TEXT NOT NULL
+    description      TEXT
+    mode             TEXT NOT NULL               -- WEEKLY | ASYNC
+    duration         INTEGER NOT NULL            -- Total planned cycles or weeks
+    start_day_index  INTEGER DEFAULT 0           -- 0=Mon … 6=Sun (WEEKLY start day)
+    cycle_count      INTEGER DEFAULT 0           -- Progress counter
+    last_modified    INTEGER NOT NULL
+
+  Routine_Workouts
+    id            TEXT PRIMARY KEY
+    routine_id    TEXT FK → Routines (CASCADE DELETE)
+    workout_id    TEXT FK → Workouts (CASCADE DELETE)
+    day_of_week   INTEGER                        -- 0–6 (WEEKLY mode)
+    week_number   INTEGER                        -- 0 = Week A, 1 = Week B (A/B weeks)
+    order_index   INTEGER NOT NULL               -- Sequence position (ASYNC mode)
+    last_modified INTEGER NOT NULL
+
+  Routine_Cycle_Overrides
+    id                  TEXT PRIMARY KEY
+    routine_id          TEXT FK → Routines (CASCADE DELETE)
+    cycle_key           TEXT NOT NULL  -- WEEKLY: Monday epoch ms; ASYNC: cycle index
+    mapping_id          TEXT FK → Routine_Workouts (CASCADE DELETE)
+    override_workout_id TEXT NOT NULL  -- Workout substituted for this slot this cycle
+    last_modified       INTEGER NOT NULL
+    UNIQUE(routine_id, cycle_key, mapping_id)
+
+4.4 Logging Tables
+
+  Logged_Sessions
+    id            TEXT PRIMARY KEY
+    workout_id    TEXT FK → Workouts
+    routine_id    TEXT FK → Routines  -- Nullable; ad-hoc sessions allowed
+    start_time    INTEGER NOT NULL    -- Epoch ms; canonical date for all metric attribution
+    end_time      INTEGER
+    notes         TEXT
+    rpe           REAL                -- 1–10 session perceived exertion
+    is_swapped    INTEGER DEFAULT 0   -- 1 if this was a workout-level swap
+    last_modified INTEGER NOT NULL
+
+  Logged_Sets
+    id            TEXT PRIMARY KEY
+    session_id    TEXT FK → Logged_Sessions (CASCADE DELETE)
+    exercise_id   TEXT FK → Exercises
+    set_type      TEXT DEFAULT 'WORKING'  -- WARMUP | WORKING | DROPSET | FAILURE
+    weight        REAL
+    reps          INTEGER
+    time_ms       INTEGER
+    distance      REAL
+    notes         TEXT
+    is_skipped    INTEGER DEFAULT 0
+    order_index   INTEGER NOT NULL
+    last_modified INTEGER NOT NULL
+
+4.5 Supporting Tables
+
+  User_Biometrics
+    id            TEXT PRIMARY KEY
+    measured_at   INTEGER NOT NULL   -- Epoch ms
+    body_weight   REAL
+    body_fat_pct  REAL
+    notes         TEXT
+    photo_path    TEXT               -- Local filesystem URI [stub; feature pending]
+    last_modified INTEGER NOT NULL
+
+  Active_Session  -- Volatile; cleared on session finish or discard
+    id                   TEXT PRIMARY KEY
+    workout_id           TEXT FK → Workouts
+    routine_id           TEXT FK → Routines  -- Nullable
+    start_time           INTEGER NOT NULL
+    current_exercise_id  TEXT
+    current_set_index    INTEGER
+    timer_start_time     INTEGER
+    is_paused            INTEGER DEFAULT 0
+    is_swapped           INTEGER DEFAULT 0
+    draft_data           TEXT    -- JSON: all current set inputs not yet committed
+    pending_swap         TEXT    -- JSON: deferred swap applied to Routine_Cycle_Overrides
+                                 --       only when the session is finished
+    last_modified        INTEGER NOT NULL
+
+  User_Settings  -- Singleton row (id = 1)
+    id                        INTEGER PRIMARY KEY CHECK (id = 1)
+    active_routine_id         TEXT FK → Routines
+    user_name                 TEXT
+    weight_unit               TEXT DEFAULT 'KG'    -- KG | LBS
+    distance_unit             TEXT DEFAULT 'KM'    -- KM | MILES
+    theme                     TEXT DEFAULT 'base'  -- light | base | dark
+    rest_timer_enabled        INTEGER DEFAULT 1
+    rest_timer_sound          INTEGER DEFAULT 1
+    rest_timer_vibrate        INTEGER DEFAULT 1
+    auto_start_rest_timer     INTEGER DEFAULT 1
+    keep_screen_on            INTEGER DEFAULT 1
+    default_rest_duration     INTEGER DEFAULT 60   -- Seconds
+    calendar_sync_enabled     INTEGER DEFAULT 0
+    sync_history_limit_months INTEGER DEFAULT 6    -- Used during desktop vault sync
+    last_sync_timestamp       INTEGER
+    vault_connection_token    TEXT                 -- LAN sync auth token [stub]
+    onboarding_complete       INTEGER DEFAULT 0
+    last_modified             INTEGER NOT NULL
+
+4.6 Indexes
+  idx_logged_sessions_start_time           ON Logged_Sessions(start_time)
+  idx_exercise_muscle_groups_muscle_group  ON Exercise_Muscle_Groups(muscle_group)
+  idx_logged_sets_session_id               ON Logged_Sets(session_id)
+  idx_logged_sets_exercise_id              ON Logged_Sets(exercise_id)
+  idx_workout_exercises_workout_id         ON Workout_Exercises(workout_id)
+  idx_routine_workouts_routine_id          ON Routine_Workouts(routine_id)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. Enums
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ExerciseType:
+  STRENGTH    — Weight + Reps
+  BODYWEIGHT  — Reps only
+  ENDURANCE   — Distance + Time
+  ISOMETRIC   — Time only
+  WEIGHTED_BW — Added weight + Reps
+
+RoutineMode:
+  WEEKLY — Workouts mapped to specific days of the week
+  ASYNC  — Sequential queue; completing all workouts = one cycle
+
+SetType:
+  WARMUP | WORKING | DROPSET | FAILURE
+  (WARMUP sets are excluded from all analytics volume calculations)
+
+MuscleGroup (full taxonomy):
+  Chest:     CHEST, UPPER_CHEST, LOWER_CHEST
+  Back:      LATS, UPPER_BACK, MID_BACK, LOWER_BACK, TRAPS
+  Shoulders: SHOULDERS, FRONT_DELTOIDS, SIDE_DELTOIDS, REAR_DELTOIDS
+  Arms:      BICEPS, TRICEPS, FOREARMS, BRACHIALIS
+  Legs:      QUADS, HAMSTRINGS, GLUTES, GLUTEUS_MEDIUS, CALVES, ADDUCTORS, ABDUCTORS
+  Core:      ABS, CORE, OBLIQUES, HIP_FLEXORS, ROTATOR_CUFF
+  Misc:      FULL_BODY, CARDIO
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. Key Design Decisions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Temporal Attribution:
+  All metrics attribute data to a session's start_time. A workout starting at 11:45 PM
+  Monday and ending at 1:00 AM Tuesday counts as a Monday session.
+
+Crash Recovery Pattern:
+  All set data is written to Active_Session.draft_data after every set log. On startup,
+  if an Active_Session row exists, the user sees a Resume / Discard prompt. The row is
+  only removed on explicit Finish (full commit) or Discard (rollback).
+
+Pending Swap Pattern:
+  Workout-level swaps are not immediately written to Routine_Workouts. The intent is
+  stored in Active_Session.pending_swap and applied to Routine_Cycle_Overrides only
+  when the session successfully finishes. This ensures a crash or discard never
+  corrupts the future routine schedule.
+
+Primary vs. Secondary Volume:
+  Exercise_Muscle_Groups allows many-to-many muscle assignment. In analytics, a set
+  counts as "primary" for the selected muscle group when is_primary = 1 on that row,
+  and "secondary" otherwise. This surfaces both direct and indirect volume for any muscle.
+
+Atomic Session Commit:
+  The transition from draft state to historical record (draft_data → Logged_Sessions +
+  Logged_Sets + Routine_Cycle_Overrides) is a single SQLite transaction. Partial commits
+  are not possible.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. Analytics Engine  (useAnalytics hook)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Query: Joins Logged_Sets → Exercise_Muscle_Groups (filtered by muscle_group) →
+       Logged_Sessions, with optional exercise_id filter. WARMUP sets excluded.
+
+Bucketing: Sets are placed into Monday-anchored 7-day week buckets based on
+           session.start_time. Each bucket computes:
+  - primarySets / secondarySets  — by is_primary flag
+  - avgLoad                      — average weight where weight > 0 and reps > 0
+  - peakE1RM                     — best Epley e1RM for the week
+  - distance / time_ms           — summed for endurance / isometric exercises
+  - frequency                    — unique session count for the week
+  - avgRPE                       — average of per-session RPEs within the week
+
+Period Comparison:
+  The same algorithm runs over the immediately preceding N weeks. All totals are compared
+  as a % change between current and prior period.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. Data Seeding
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+On first launch, seed.ts runs atomically from seed-data.json, populating Exercises,
+Exercise_Muscle_Groups, Workouts, Workout_Exercises, Routines, and Routine_Workouts with
+a "Solid Base" library (PPL, Upper/Lower, and other common programs). Uses INSERT OR IGNORE
+so re-runs are safe. Seeded content gives users a non-empty starting state without
+requiring any manual setup before their first session.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. Data Portability
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Per-routine export/import:
+  JSON bundle containing the routine, its workouts, exercises, and muscle group
+  assignments. Conflict resolution on import: Replace or Duplicate strategy.
+  Compatible with the desktop app's importer.
+
+Full backup:
+  Exports all sessions, biometrics, routines, and settings as an AES-256 encrypted
+  archive. Restore overwrites all local data.
+  [UI present in Settings Zone; encryption and file picker pending v1.1]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. Deferred to Desktop Cycle / v1.1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Desktop sync protocol (vault_connection_token schema present; server-side pending)
+  - Progress photo capture (photo_path column exists; camera/gallery integration pending)
+  - Full backup AES-256 encryption and file picker
+  - Desktop → Mobile bidirectional sync (out of scope for v1.0)

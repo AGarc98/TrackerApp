@@ -1,0 +1,172 @@
+PrivateLift — App Store Description Assets
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CHARACTER LIMITS (for reference when submitting)
+  App Store (iOS):  App name 30 chars | Subtitle 30 chars | Description 4,000 chars
+                    Promotional text 170 chars (editable without re-review)
+  Google Play:      App name 50 chars | Short description 80 chars | Description 4,000 chars
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APP NAME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Private Lift
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUBTITLE  (iOS — 30 chars max)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Strength Tracker. Your Data.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SHORT DESCRIPTION  (Google Play — 80 chars max)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Build serious programs. Track every session. No account, no cloud, no compromises.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROMOTIONAL TEXT  (iOS only — 170 chars max, editable without re-review)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  No subscription. No account. No cloud. Just your training data, stored on your device
+  and completely under your control.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FULL DESCRIPTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Private Lift is a serious training tool built for people who care about both their
+performance and their privacy. Every set, session, and milestone you log stays on
+your device — no account required, no subscription, no data harvested.
+
+Whether you're running a 12-week powerlifting block, managing a custom PPL split, or
+just trying to train consistently, Private Lift gives you the structure to build a
+real program and the data to know whether it's working.
+
+──────────────────────────────────────────
+BUILD YOUR PROGRAM, YOUR WAY
+──────────────────────────────────────────
+
+Design training programs that match how you actually train — not how an app forces you
+to think about training.
+
+  Weekly Routines — Map workouts to specific days. Mix A and B weeks for programs that
+  alternate between two schedules. Set which day your training week starts.
+
+  Async Routines — Build a sequential queue instead of a day schedule. Work through
+  it at your own pace. Every time you complete the full sequence, that's one cycle.
+  Ideal for athletes whose training days shift week to week.
+
+  Workout Builder — Assemble any combination of exercises into a named workout day.
+  Set target sets, reps, weight, time, or distance per exercise. Group exercises into
+  supersets. Override the default rest period per exercise slot.
+
+  Exercise Library — A pre-loaded library of common exercises gets you started
+  immediately. Add your own, assign primary and secondary muscle groups, set a default
+  rest duration, and categorize by type: strength, bodyweight, endurance, isometric,
+  or weighted bodyweight.
+
+──────────────────────────────────────────
+A SESSION ENGINE BUILT FOR THE GYM FLOOR
+──────────────────────────────────────────
+
+Private Lift is designed to get out of your way between sets.
+
+  Smart Rest Timer — Starts automatically when you log a set. Each exercise uses its
+  own rest period, or falls back to your global default. Sound and haptic alerts tell
+  you when to go again — you don't need to look at your phone.
+
+  Exercise Swaps — Need to substitute something? Swap any exercise for this session
+  only, without touching your program. Or swap the entire workout with another day in
+  your routine when life gets in the way.
+
+  Set Types — Log warm-up sets, working sets, drop sets, and failure sets. Warm-ups
+  are tracked but kept separate from your performance data so they don't skew your
+  numbers.
+
+  Session Notes & RPE — Rate how hard the session felt and add notes at the end.
+  Useful for spotting patterns you can't see in the numbers alone.
+
+  Crash Recovery — The app saves your progress continuously. If it crashes or you
+  accidentally close it mid-session, your sets are waiting for you when you reopen it.
+
+──────────────────────────────────────────
+ANALYTICS THAT MEAN SOMETHING
+──────────────────────────────────────────
+
+Understand your training, not just your numbers.
+
+  Filter by any of 35 muscle groups organized into anatomical categories. Drill down
+  to a single exercise. Select a 4, 8, 12, or 24-week window.
+
+  See how your training volume, estimated 1-rep max, average load, distance, time, and
+  session RPE have changed compared to the previous period of the same length.
+
+  Primary and secondary volume are tracked separately — so when you bench press, you
+  see the chest work and the tricep contribution distinctly.
+
+──────────────────────────────────────────
+YOUR DATA, COMPLETELY
+──────────────────────────────────────────
+
+  No Account — Private Lift works the moment you download it. There is no sign-up,
+  no login, and no profile tied to a server anywhere.
+
+  No Cloud — Your data lives in a local database on your device. We have no servers
+  that receive your information because the app never sends it.
+
+  No Subscription — Pay once, own it. No monthly fees, no features locked behind
+  a tier.
+
+  Export Anytime — Back up your full training history as an encrypted archive whenever
+  you want. Your data is yours to keep and move.
+
+  Desktop Companion (Coming Soon) — A companion desktop app will let you sync your
+  training history to your own computer over your local Wi-Fi — no internet required.
+  Review your data on a larger screen, manage multiple profiles, and keep a permanent
+  archive of your entire training history.
+
+──────────────────────────────────────────
+WHO IS PRIVATE LIFT FOR?
+──────────────────────────────────────────
+
+Private Lift is built for lifters who want more than a basic workout log but don't
+want to hand their health data to a company running it through a recommendation
+algorithm. It suits:
+
+  — Intermediate to advanced lifters running structured periodized programs
+  — Coaches who want a no-frills tool to build and track client programs
+  — Anyone who has looked at the permissions or subscription price of a mainstream
+    fitness app and decided there has to be a better option
+
+If you log every session, care about your numbers, and want to own your data — this
+app was built for you.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEYWORDS  (iOS — comma-separated, 100 chars max total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  workout,strength,lifting,powerlifting,gym,tracker,log,routine,program,offline,private
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CATEGORY SUGGESTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  iOS Primary:    Health & Fitness
+  iOS Secondary:  Sports
+  Google Play:    Health & Fitness
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTENT RATING NOTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  No violence, no user-generated content shared with others, no social features,
+  no in-app purchases beyond the initial download price, no ads.
+  Expected rating: 4+ (iOS) / Everyone (Google Play)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT'S NEW  (template for version release notes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Version 0.1.0
+  First release. Build programs. Log sessions. Own your data.

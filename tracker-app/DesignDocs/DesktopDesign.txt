@@ -1,0 +1,473 @@
+PrivateLift: Desktop App — System Design Document (v1.0 Draft)
+Framework: Tauri v2  |  Platforms: Windows, macOS, Linux  |  Frontend: React + TypeScript
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Vision & Scope
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The PrivateLift desktop app is the second development cycle, following the shipped mobile
+app (v1). It serves two simultaneous roles:
+
+  Training Vault — Long-term archive for sessions, biometrics, and progress photos synced
+  from one or more mobile devices. No storage pressure, no history cap, full access to
+  the complete historical record.
+
+  Program Studio — The primary interface for creating and fine-tuning training programs.
+  While routines can be built in the mobile Architect Zone, the desktop offers a more
+  ergonomic editing experience: keyboard navigation, drag-and-drop, master-detail layout,
+  and multi-profile management.
+
+Primary use case: A trainer or coach running the desktop app to manage multiple client
+profiles, each with their own routine stack and session history, while sharing a common
+exercise library across all profiles.
+
+Secondary use case: A single user who trains on mobile and reviews, plans, and archives
+on desktop.
+
+LAN sync (mobile → desktop) is a core feature. Without it, the desktop provides no
+practical value for a mobile user. It is not optional.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. Framework: Tauri v2
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tauri v2 wraps a React/TypeScript web frontend in a native OS window backed by a Rust
+process. It produces native binaries for all three platforms from a single codebase with
+a significantly smaller install footprint than Electron (no bundled Chromium).
+
+Key architectural properties:
+  - All privileged operations (filesystem, network server, SQLite) live in Rust and are
+    exposed to the frontend as Tauri Commands via invoke().
+  - The frontend is a standard web app (React + Vite) with no special Tauri APIs needed
+    for rendering logic — only for system access.
+  - Tauri's capability model enforces least-privilege: permissions must be explicitly
+    declared per feature in tauri.conf.json.
+
+2.1 Frontend Stack
+  Language:      TypeScript (Strict Mode)
+  Framework:     React 18
+  Bundler:       Vite
+  Styling:       Tailwind CSS v4
+
+  Design continuity: Tailwind tokens (colors, border-radius scale, typography) should
+  mirror the mobile NativeWind design system. A shared design-tokens file (or package)
+  is the single source of truth for both platforms, so the app feels visually cohesive
+  to users who switch between mobile and desktop.
+
+  Icons:         Same icon set as mobile (Lucide or Material community)
+  Charts:        Web-compatible charting library (e.g., Recharts) — full chart types
+                 are available on desktop, unlike mobile's custom SVG bars
+  Drag-and-drop: @dnd-kit/core (mouse-native; not needed on mobile)
+
+2.2 Key Tauri Plugins
+  tauri-plugin-sql         — SQLite access from the frontend (queries run via Rust)
+  tauri-plugin-fs          — Capability-scoped file system access
+  tauri-plugin-window-state— Persist and restore window size/position across launches
+  tauri-plugin-updater     — OTA updates for release distribution
+  tauri-plugin-shell       — (Minimal use; only if needed for external file operations)
+
+2.3 Sync Server
+  The LAN sync server runs entirely as a Rust background task (Axum HTTP server) spawned
+  by a Tauri Command. It is NOT a Tauri plugin — it is application logic that lives in
+  src-tauri/. The frontend starts, stops, and polls it via invoke() calls and receives
+  status updates via Tauri events (app.emit()). This design keeps all socket binding in
+  the Rust layer where it is safe to do so.
+
+2.4 Database Access
+  Use tauri-plugin-sql for all database access from the frontend. Migrations are versioned
+  SQL files applied by the Rust init sequence on startup. Each database connection (per-
+  profile data.db and the shared exercises.db) is opened by absolute path, not by a
+  hardcoded connection name. Never hardcode platform-specific paths in frontend code —
+  use Tauri's app.path() API for $AppData resolution on all three OS targets.
+
+2.5 Cross-Platform Path Conventions
+  Windows:  %APPDATA%\PrivateLift\
+  macOS:    ~/Library/Application Support/PrivateLift/
+  Linux:    ~/.local/share/PrivateLift/  (or $XDG_DATA_HOME if set)
+  All code references these as {AppData}/PrivateLift/ using Tauri's path resolution.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. Multi-Profile Architecture
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3.1 Profile Isolation
+Each profile is a completely independent data silo:
+  {AppData}/PrivateLift/profiles/{profile_id}/data.db   — sessions, routines, settings
+  {AppData}/PrivateLift/profiles/{profile_id}/media/    — progress photos
+
+Profiles never share a database connection. Queries against profile A cannot touch
+profile B's data. Profile metadata (id, display_name, color_tag, created_at,
+last_accessed) is stored in a top-level:
+  {AppData}/PrivateLift/profiles.json
+
+Profile switching is available from the sidebar at any time. The active profile is
+loaded into app state and all data views re-query against the new profile's database.
+
+3.2 Global Exercise Library
+Exercises and their muscle group mappings live in a shared library database:
+  {AppData}/PrivateLift/shared/exercises.db
+
+All profiles can read from this library. When a trainer creates a new exercise it goes
+into the global library by default. Each exercise in the editor has a "Global / Local"
+toggle — setting it to "Local" stores the exercise in the profile's own data.db instead,
+scoping it to that client only.
+
+Implications:
+  - A "Barbell Back Squat" in the global library is referenced by every client profile
+    that uses it, with no duplication of the definition.
+  - A proprietary or rehab movement unique to one athlete lives in their profile-local
+    exercises and is invisible to other profiles.
+  - When a mobile sync brings in exercises that don't exist yet, they arrive in the
+    profile-local scope. The trainer can optionally "promote" them to global.
+
+3.3 Routine & Workout Scope
+Routines and workouts are always profile-scoped (stored in data.db). Sharing a routine
+between profiles uses the same per-routine JSON format as mobile — import/export, not
+database-level sharing. This preserves each client's program independence while making
+template duplication straightforward.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. Navigation: Sidebar Layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The desktop replaces the mobile bottom tab bar with a persistent left sidebar. The
+sidebar has two states: expanded (icon + label) and collapsed (icon only). User
+preference persisted via tauri-plugin-window-state.
+
+Sidebar sections (top to bottom):
+  ─ Profile switcher  — avatar + display name; click to open profile picker / create
+  ─ Dashboard
+  ─ Sessions          — Log new session + session history
+  ─ Library           — Exercises, Workouts, Routines (Architect equivalent)
+  ─ Analytics         — Data Zone equivalent + extended
+  ─ Biometrics        — Body measurements + progress photos
+  ─ Sync              — Mobile sync server and connection management
+  ─ Settings
+  — [bottom] App version / update indicator
+
+Keyboard shortcuts for section navigation:
+  Ctrl+1  Dashboard
+  Ctrl+2  Sessions
+  Ctrl+3  Library
+  Ctrl+4  Analytics
+  Ctrl+5  Biometrics
+  Ctrl+6  Sync
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. Screens & Features
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5.1 Dashboard
+  - Active routine card: name, mode badge, cycle progress bar, next scheduled workout
+  - Recent sessions feed: last 5–10 sessions with workout name, duration, RPE, set count
+  - Body weight sparkline (last 30 entries)
+  - Quick-access buttons: "Log Session", "Add Biometrics", "Open Sync"
+  - For trainer view: list of profiles with last-sync timestamps at a glance
+
+5.2 Sessions  (Athlete Zone equivalent — simplified)
+───────────────────────────────────────────────────
+Two sub-views: "Log New Session" and "Session History".
+
+Log New Session — Spreadsheet Interface:
+  The desktop logger is intentionally simpler than the mobile active session engine.
+  It is designed for post-workout data entry, trainer-side client logging, and
+  retroactive session entry — not for use at the gym.
+
+  Interface:
+    - Workout selector dropdown (from active routine or free selection)
+    - Start time and end time date+time pickers (default to "now")
+    - Session notes (text) and RPE (1–10) fields at the top
+    - Exercise grid below:
+        Rows = exercise slots from the selected workout (in order)
+        Columns = Set 1, Set 2, … Set N (user can add extra set columns dynamically)
+        Each cell = weight | reps (or time/distance per ExerciseType)
+        Set type selectable per-cell via a dropdown (WARMUP / WORKING / DROPSET / FAILURE)
+    - "Save Session" commits everything in a single SQLite transaction, identical to
+      the mobile finish-session atomic commit
+
+  No rest timer, no per-set checkboxes, no real-time state persistence — this is a
+  data entry form, not a live tracking engine.
+
+Session History:
+  - Chronological list: date, workout name, duration, RPE, total sets
+  - Click any session to open the full detail view (all sets, notes, RPE)
+  - Filter by: date range, routine, workout, muscle group
+  - Edit or delete individual sessions (desktop-only capability)
+  - Export individual session as CSV
+
+5.3 Library  (Architect Zone equivalent — extended)
+───────────────────────────────────────────────────
+Layout: Master-detail. List panel on left, editor panel on right. No full-screen modals.
+
+Exercises:
+  - All mobile Architect Zone exercise functionality
+  - Global vs. Profile-local toggle on each exercise
+  - Bulk actions: multi-select → batch-assign primary muscle group or type
+  - Keyboard: Enter to open editor, Escape to cancel, Ctrl+S to save
+
+Workouts:
+  - All mobile workout builder functionality
+  - Drag-and-drop exercise reordering via mouse (@dnd-kit)
+  - Right-click context menu: Edit, Duplicate, Export, Delete
+
+Routines:
+  - All mobile routine builder functionality
+  - Drag-and-drop workout/day reordering
+  - A/B week toggle and start-day selector as explicit, always-visible controls
+    (same data as mobile but easier to access in the wider layout)
+  - "Export Routine" per routine card → generates JSON compatible with mobile import
+  - "Import Routine" → parses JSON, runs conflict detection (same Replace/Duplicate
+    strategy as mobile); works with routines exported from mobile or other desktop
+    installs
+
+5.4 Analytics  (Data Zone + Extended)
+──────────────────────────────────────
+The desktop Analytics screen retains all mobile Data Zone functionality and extends it.
+
+Same-as-mobile baseline:
+  - Muscle group hierarchical filter (same MuscleGroup enum and category structure)
+  - Exercise drill-down within the selected muscle group
+  - Timeframe: 4 | 8 | 12 | 24 weeks (rolling, Monday-anchored buckets)
+  - Metrics: Sets (primary / secondary), E1RM, Avg Load, Distance, Time, RPE
+  - Period-over-period % comparison (current vs. preceding same-length window)
+
+Desktop additions — Charting:
+  Use a proper chart library (e.g., Recharts) for richer visualization types:
+    - Line charts for e1RM and load progression over time
+    - Stacked bar charts for volume split by primary vs. secondary sets
+    - Radar / spider chart for effort distribution across muscle groups
+    - Heatmap calendar view (GitHub-contribution style) for training frequency
+
+Desktop additions — Fatigue Tracking:
+  - Track cumulative weekly tonnage (sets × reps × weight) against the athlete's
+    own rolling 4-week average baseline
+  - Overlay a fatigue band on the volume chart:
+      Green  = within ±20% of baseline (normal training load)
+      Amber  = >20% above baseline (elevated; monitor for recovery)
+      Red    = >40% above or >30% below baseline (potential overtraining or undertraining)
+  - Flag consecutive high-load weeks with a "Deload Suggested" indicator
+
+Desktop additions — Pattern Analysis:
+  - Day-of-week adherence: completion rate per day (e.g., "Mondays: 91%, Sundays: 38%")
+  - Most-skipped workouts: ranked list of workout slots most frequently missed
+  - Session start time distribution: histogram of when sessions typically begin
+  - Workout duration trends: is the athlete spending more or less time per session
+    over the selected period?
+
+Desktop additions — Progression Analysis:
+  - Progression velocity per exercise: rate of e1RM gain per week over the selected window
+  - Stalled vs. progressing: highlight exercises above or below the athlete's own
+    average progression rate
+  - Effort distribution: relative volume split across muscle groups (who's getting
+    undertrained vs. overtrained relative to the athlete's own history)
+
+Desktop additions — Personal Records Table:
+  - Best weight, best reps, and best e1RM per exercise
+  - Filterable by date range ("PR within the last 12 weeks")
+  - Visually flagged when the most recent session set a new record
+
+Export: All analytics views export to CSV.
+
+5.5 Biometrics & Progress Photos
+──────────────────────────────────
+  - Full biometric history list: body weight and body fat % over time with trend chart
+  - Correlated view: overlay weight trend and training volume chart for the same period
+
+  Progress Photos:
+    - Grid view grouped by check-in date (linked to User_Biometrics entries)
+    - Multiple angles per check-in: FRONT, SIDE_L, SIDE_R, BACK, OTHER
+    - Side-by-side comparison mode: pick any two check-in dates, view all angles
+      simultaneously for a before/after view
+    - Drag-and-drop or file picker import of photos from the filesystem
+    - Photos stored in profiles/{profile_id}/media/ relative paths — never uploaded,
+      always local, users can copy them manually
+    - Photo data is stored in the Progress_Photos table (see §6.2) rather than the
+      single photo_path stub used by mobile
+
+5.6 Sync  (Core Feature)
+─────────────────────────
+The Sync screen manages the LAN connection from mobile clients.
+
+How it works:
+  1. Desktop opens the Sync screen → enables the sync server if not already running
+  2. A QR code and plaintext token are displayed, encoding:
+       { ip: "192.168.x.x", port: 7743, token: "<128-bit random hex>" }
+  3. Mobile user opens Settings → Desktop Sync, pastes or scans the token
+  4. Mobile connects to the desktop's HTTP server (Rust/Axum) and authenticates
+  5. Mobile sends all records modified since last_sync_timestamp
+  6. Desktop upserts records using Last-Write-Wins (higher last_modified wins)
+  7. Desktop confirms; both sides update last_sync_timestamp
+  8. Token is rotated after each successful sync (single-use per session)
+
+Sync direction:  Mobile → Desktop only (v1.0). Desktop → Mobile is deferred.
+
+Tables synced: Exercises, Exercise_Muscle_Groups, Workouts, Workout_Exercises,
+               Routines, Routine_Workouts, Routine_Cycle_Overrides,
+               Logged_Sessions, Logged_Sets, User_Biometrics
+
+Conflict resolution: Last-Write-Wins on last_modified. Append-only tables
+(Logged_Sessions, Logged_Sets) rarely conflict — new mobile records are inserted
+directly. For exercises and routine definitions, the higher last_modified wins.
+
+History scope: Mobile sends sync_history_limit_months worth of session data.
+Desktop stores everything received and never enforces a cap.
+
+Multi-profile routing: When a mobile client connects, if more than one profile exists,
+the Sync screen shows a "Which profile is this for?" picker before the sync begins.
+
+Sync screen UI elements:
+  - QR code display + plaintext token + "Copy" button
+  - Connection status badge: Idle → Waiting → Handshake → Syncing → Complete
+  - Records summary: "X sessions received, Y exercises updated, Z conflicts resolved"
+  - Sync history log: last N sync events with timestamps and record counts
+  - "Import from File" button: accepts a mobile backup archive (.plift / .zip format)
+  - Last sync timestamp per profile
+
+System tray integration:
+  When the sync server is running, the app can minimize to the system tray so the
+  desktop remains available as a sync target without occupying screen space.
+  Tray right-click menu: Open, Stop Sync Server, Quit.
+
+5.7 Settings
+────────────
+  All mobile settings carry over (weight unit, distance unit, theme, rest timer config)
+  applied per-profile. Desktop-specific additions:
+
+  Profile Management:
+    - Create new profile (triggers a lightweight onboarding: name, units, theme)
+    - Rename or delete profiles
+    - View per-profile database file size and last sync timestamp
+    - Assign a color tag for quick visual identification in the sidebar
+
+  Global Exercise Library:
+    - View and manage global exercises separately from any profile
+    - Promote a profile-local exercise to global scope
+
+  Sync Server:
+    - Enable / disable the sync server
+    - Configure port (default 7743)
+    - View current connection token; regenerate manually if needed
+    - View connection log
+
+  Theme: System / Light / Dark — matching mobile's three modes. Implemented via
+         Tailwind's `dark:` prefix and a CSS class toggled on the root element.
+
+  Backup & Restore:
+    - Export a full profile backup archive (format TBD; see §7)
+    - Import a mobile backup file into the current profile
+    - Export all profiles at once (trainer-level full backup)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. Database Schema (Desktop)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The desktop schema is a superset of the mobile schema. All mobile tables are carried
+over without modification. The desktop adds tables where mobile had stubs or gaps.
+
+6.1 Shared Tables (identical to mobile — see DesignDoc.txt §4)
+  Exercises               — in shared exercises.db (global) or data.db (profile-local)
+  Exercise_Muscle_Groups  — mirrors exercise scope (global or local)
+  Workouts                — in data.db (always profile-scoped)
+  Workout_Exercises       — in data.db
+  Routines                — in data.db
+  Routine_Workouts        — in data.db
+  Routine_Cycle_Overrides — in data.db
+  Logged_Sessions         — in data.db
+  Logged_Sets             — in data.db
+  User_Biometrics         — in data.db (photo_path column unused; replaced by §6.2)
+  User_Settings           — in data.db (same schema; vault_connection_token now active)
+
+6.2 Desktop-Only Tables  (in data.db per profile)
+
+  Progress_Photos
+  Replaces the photo_path stub in User_Biometrics with a proper join table supporting
+  multiple angles per check-in.
+    id            TEXT PRIMARY KEY
+    biometric_id  TEXT FK → User_Biometrics
+    file_path     TEXT NOT NULL    -- Relative to profiles/{profile_id}/media/ for portability
+    angle         TEXT             -- FRONT | SIDE_L | SIDE_R | BACK | OTHER
+    taken_at      INTEGER NOT NULL -- Epoch ms
+    last_modified INTEGER NOT NULL
+
+  Sync_Log
+  Audit trail for incoming mobile sync events.
+    id                 TEXT PRIMARY KEY
+    synced_at          INTEGER NOT NULL
+    direction          TEXT DEFAULT 'INBOUND'
+    device_hint        TEXT              -- Optional: display name or IP of the mobile device
+    records_received   INTEGER
+    conflicts_resolved INTEGER
+    last_modified      INTEGER NOT NULL
+
+6.3 Desktop-Specific User_Settings Additions
+  (Added columns to the User_Settings singleton)
+    sync_server_enabled  INTEGER DEFAULT 0
+    sync_port            INTEGER DEFAULT 7743
+    sidebar_collapsed    INTEGER DEFAULT 0
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. Data Portability & Backup Format
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The exact archive format (container, encryption scheme) is left loose for now to avoid
+committing prematurely. General expectations:
+
+  - A single archive file per profile export (extension TBD, e.g., .plift)
+  - Contains: a full data dump (SQL or JSON) + the media/ folder (progress photos)
+  - Optional AES-256 encryption with a user-provided passkey
+  - Must be importable by the desktop app from any OS
+  - Mobile full backup archives (same container) must be importable by the desktop importer
+  - Per-routine JSON bundles remain a separate, lightweight format for routine sharing only
+
+Decisions deferred until implementation: container format (zip vs. custom binary),
+key derivation function (Argon2id preferred), schema versioning on import.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. Shared Types
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The TypeScript interfaces in mobile's types/database.ts (Exercises, Workouts, Routines,
+LoggedSessions, etc.) should be extracted into a shared package (e.g., @privatelift/types)
+referenced by both the mobile and desktop codebases. This enforces schema compatibility
+at the type level as both apps evolve in parallel. The enum definitions (MuscleGroup,
+ExerciseType, RoutineMode, SetType) are the highest-value candidates for this — they
+drive both the UI and the database layer on both platforms.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. Security Considerations
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Tauri capability model: declare only the minimum required filesystem scopes and
+    plugin permissions in tauri.conf.json. No blanket filesystem access.
+  - Sync token: 128-bit cryptographically random hex, single-use per session.
+    Regenerated after every successful sync.
+  - Sync server: binds only to the local network interface. No public internet exposure.
+    TLS is not applied (LAN-only); the token is sufficient for this threat model.
+  - No external network calls from the frontend. CSP blocks unexpected outbound
+    connections.
+  - Backup encryption: AES-256-GCM with key derivation deferred to implementation
+    (Argon2id recommended). Encrypted archives are self-contained and decryptable
+    with only the passkey.
+  - Profile isolation: OS-level file permissions on the data.db files. No cross-profile
+    queries are possible by construction (separate database connections).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. Out of Scope for Desktop v1.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Desktop → Mobile sync (bidirectional)
+  - Real-time active session engine with timer and set checkboxes (mobile does this)
+  - AI / ML coaching suggestions beyond the pattern analysis described in §5.4
+  - External data source integration (wearables, barcode scanning, third-party APIs)
+  - Multi-user collaboration or real-time shared sessions between desktop clients
+  - Cloud backup or any form of internet sync
+  - Subscription or account system (app remains fully local and offline)
