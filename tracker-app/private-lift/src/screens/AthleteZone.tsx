@@ -248,12 +248,18 @@ export const AthleteZone = () => {
   const [routineProgress, setRoutineProgress] = useState({ completed: 0, total: 0 });
   const [todayInfo, setTodayInfo] = useState<{ workoutName: string | null; isRestDay: boolean; doneToday: boolean } | null>(null);
   const [rpeModalVisible, setRpeModalVisible] = useState(false);
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [sessionNote, setSessionNote] = useState('');
   const [hasCheckedResume, setHasCheckedResume] = useState(false);
   const [workoutName, setWorkoutName] = useState('');
 
   useEffect(() => {
     loadInitialData();
   }, [activeRoutineId, activeSession]);
+
+  useEffect(() => {
+    if (!activeSession) setSessionNote('');
+  }, [activeSession]);
 
   useEffect(() => {
     if (isLoading || hasCheckedResume) return;
@@ -717,22 +723,71 @@ export const AthleteZone = () => {
         </TouchableOpacity>
       )}
 
-      <View className="px-8 py-8 bg-surface/80 border-t border-border flex-row space-x-5 backdrop-blur-md">
+      <View className="px-8 py-8 bg-surface/80 border-t border-border backdrop-blur-md">
+        <View className="flex-row space-x-5 mb-3">
+          <TouchableOpacity
+            onPress={discardWorkout}
+            activeOpacity={0.7}
+            className="flex-1 bg-background py-6 rounded-[28px] items-center border border-border"
+          >
+            <Text className="text-text-muted font-black uppercase tracking-[2px] text-xs">Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setRpeModalVisible(true)}
+            activeOpacity={0.8}
+            className="flex-[2] bg-text-main py-6 rounded-[28px] items-center shadow-2xl shadow-text-main/20"
+          >
+            <Text className="text-background font-black uppercase tracking-[4px] text-xs">Finish Workout</Text>
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
-          onPress={discardWorkout}
+          onPress={() => setNoteModalVisible(true)}
           activeOpacity={0.7}
-          className="flex-1 bg-background py-6 rounded-[28px] items-center border border-border"
+          className="py-3 items-center"
         >
-          <Text className="text-text-muted font-black uppercase tracking-[2px] text-xs">Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setRpeModalVisible(true)}
-          activeOpacity={0.8}
-          className="flex-[2] bg-text-main py-6 rounded-[28px] items-center shadow-2xl shadow-text-main/20"
-        >
-          <Text className="text-background font-black uppercase tracking-[4px] text-xs">Finish Workout</Text>
+          <Text className={`text-xs font-black uppercase tracking-widest ${sessionNote ? 'text-primary' : 'text-text-muted/50'}`}>
+            {sessionNote ? 'Edit Note' : '+ Add Note'}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={noteModalVisible} animationType="fade" transparent>
+        <View className="flex-1 bg-black/60 justify-end">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View className="bg-surface rounded-t-[40px] px-8 pt-8 pb-12">
+              <Text className="text-2xl font-black text-text-main tracking-tighter text-center mb-1">Session Note</Text>
+              <Text className="text-text-muted font-bold text-sm text-center mb-8">Anything worth remembering?</Text>
+              <TextInput
+                className="bg-background border border-border rounded-3xl p-5 text-text-main font-medium text-sm mb-6"
+                placeholder="e.g. felt strong, left knee tight, PR on bench..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                value={sessionNote}
+                onChangeText={setSessionNote}
+                autoFocus
+              />
+              <TouchableOpacity
+                onPress={() => setNoteModalVisible(false)}
+                activeOpacity={0.8}
+                className="bg-text-main py-5 rounded-[28px] items-center"
+              >
+                <Text className="text-background font-black uppercase tracking-[4px] text-xs">Done</Text>
+              </TouchableOpacity>
+              {sessionNote.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => { setSessionNote(''); setNoteModalVisible(false); }}
+                  activeOpacity={0.6}
+                  className="mt-4 py-2 items-center"
+                >
+                  <Text className="text-text-muted font-black text-xs uppercase tracking-widest">Clear Note</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
       <Modal visible={rpeModalVisible} animationType="fade" transparent>
         <View className="flex-1 bg-black/60 justify-end">
@@ -750,7 +805,7 @@ export const AthleteZone = () => {
                   return (
                     <TouchableOpacity
                       key={n}
-                      onPress={() => { finishWorkout(n); setRpeModalVisible(false); }}
+                      onPress={() => { finishWorkout(n, sessionNote || undefined); setRpeModalVisible(false); }}
                       activeOpacity={0.75}
                       className="w-14 h-14 rounded-2xl items-center justify-center shadow-sm"
                       style={{ backgroundColor: bgColor }}
@@ -762,7 +817,7 @@ export const AthleteZone = () => {
               </View>
             ))}
             <TouchableOpacity
-              onPress={() => { finishWorkout(undefined); setRpeModalVisible(false); }}
+              onPress={() => { finishWorkout(undefined, sessionNote || undefined); setRpeModalVisible(false); }}
               activeOpacity={0.6}
               className="mt-6 py-3 items-center"
             >

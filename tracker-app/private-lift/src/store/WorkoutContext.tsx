@@ -13,7 +13,7 @@ interface WorkoutContextType {
   startWorkout: (workout: Workout, exercises: { exercise: Exercise; target_sets: number; target_reps: number | null; target_weight?: number | null }[], routineId?: string | null, pendingSwap?: PendingSwap | null) => Promise<void>;
   logSet: (exerciseId: string, sets: SetData[]) => Promise<void>;
   swapExercise: (oldExerciseId: string, newExerciseId: string) => Promise<void>;
-  finishWorkout: (rpe?: number) => Promise<void>;
+  finishWorkout: (rpe?: number, notes?: string) => Promise<void>;
   discardWorkout: () => Promise<void>;
   resumeWorkout: () => Promise<void>;
   setActiveRoutine: (routineId: string | null, duration?: number, startDayIndex?: number) => Promise<void>;
@@ -254,7 +254,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const finishWorkout = async (rpe?: number) => {
+  const finishWorkout = async (rpe?: number, notes?: string) => {
     if (!activeSession) return;
 
     try {
@@ -262,8 +262,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const lastModified = endTime;
       DB.transaction(() => {
         DB.run(
-          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, rpe, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
-          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, rpe ?? null, activeSession.is_swapped, lastModified]
+          'INSERT INTO Logged_Sessions (id, workout_id, routine_id, start_time, end_time, notes, rpe, is_swapped, last_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);',
+          [activeSession.id, activeSession.workout_id, activeSession.routine_id, activeSession.start_time, endTime, notes ?? null, rpe ?? null, activeSession.is_swapped, lastModified]
         );
 
         Object.entries(draftSets).forEach(([exerciseId, sets]) => {
