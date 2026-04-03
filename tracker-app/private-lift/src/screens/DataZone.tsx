@@ -3,6 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Mod
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useWorkout } from '../store/WorkoutContext';
+import { DB } from '../database/db';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -199,6 +200,18 @@ export const DataZone = () => {
   const totalFrequency    = useMemo(() => data.reduce((a, p) => a + p.frequency, 0), [data]);
   const totalDistance     = useMemo(() => data.reduce((a, p) => a + p.distance, 0), [data]);
   const periodBestE1RM    = useMemo(() => Math.max(...data.map(p => p.peakE1RM), 0), [data]);
+
+  const sessionNotes = useMemo(() => {
+    const since = Date.now() - selectedWeeks * 7 * 24 * 60 * 60 * 1000;
+    return DB.getAll<{ id: string; start_time: number; notes: string; rpe: number | null; workout_name: string | null }>(
+      `SELECT ls.id, ls.start_time, ls.notes, ls.rpe, w.name as workout_name
+       FROM Logged_Sessions ls
+       LEFT JOIN Workouts w ON ls.workout_id = w.id
+       WHERE ls.notes IS NOT NULL AND ls.notes != '' AND ls.start_time >= ?
+       ORDER BY ls.start_time DESC;`,
+      [since]
+    );
+  }, [selectedWeeks]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -530,6 +543,42 @@ export const DataZone = () => {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* ── Session Notes ── */}
+        <View className="px-6 mt-8 mb-4">
+          <Text className="text-text-main font-black text-xl mb-4 tracking-tighter">Session Notes</Text>
+          {sessionNotes.length === 0 ? (
+            <View className="bg-surface p-6 rounded-[32px] border border-border items-center">
+              <Text className="text-text-muted font-black text-xs uppercase tracking-widest text-center">
+                No notes in this period
+              </Text>
+              <Text className="text-text-muted text-[10px] mt-1 text-center">Add a note at the end of a workout to see it here</Text>
+            </View>
+          ) : (
+            sessionNotes.map(entry => {
+              const d = new Date(entry.start_time);
+              const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+              return (
+                <View key={entry.id} className="bg-surface p-6 rounded-[32px] border border-border mb-3">
+                  <View className="flex-row items-center justify-between mb-3">
+                    <View className="flex-1 mr-3">
+                      <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-0.5">{dateStr}</Text>
+                      {entry.workout_name && (
+                        <Text className="text-text-main font-black text-sm">{entry.workout_name}</Text>
+                      )}
+                    </View>
+                    {entry.rpe != null && (
+                      <View className="bg-primary-soft px-3 py-1.5 rounded-xl border border-primary/10">
+                        <Text className="text-primary font-black text-[10px] uppercase tracking-widest">RPE {entry.rpe}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text className="text-text-main font-medium text-sm leading-5">{entry.notes}</Text>
+                </View>
+              );
+            })
+          )}
         </View>
       </ScrollView>
 
