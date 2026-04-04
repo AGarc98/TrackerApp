@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { MuscleGroup } from '../types/database';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useWorkout } from '../store/WorkoutContext';
@@ -217,6 +217,7 @@ export const DataZone = () => {
 
   type BioMetric = 'WEIGHT' | 'BODY_FAT';
   const [selectedBioMetric, setSelectedBioMetric] = useState<BioMetric>('WEIGHT');
+  const [expandedBioEntryId, setExpandedBioEntryId] = useState<string | null>(null);
 
   const bioChartData = useMemo(() => {
     const since = Date.now() - selectedWeeks * 7 * 24 * 60 * 60 * 1000;
@@ -277,6 +278,14 @@ export const DataZone = () => {
     return ((vals[vals.length - 1] - vals[0]) / vals[0]) * 100;
   }, [bioValues]);
   const bioHasData = bioValues.some(v => v != null);
+
+  const bioEntries = useMemo(() => {
+    const since = Date.now() - selectedWeeks * 7 * 24 * 60 * 60 * 1000;
+    return DB.getAll<{ id: string; measured_at: number; body_weight: number | null; body_fat_pct: number | null; notes: string | null; photo_path: string | null }>(
+      'SELECT id, measured_at, body_weight, body_fat_pct, notes, photo_path FROM User_Biometrics WHERE measured_at >= ? ORDER BY measured_at DESC;',
+      [since]
+    );
+  }, [selectedWeeks]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
@@ -717,6 +726,69 @@ export const DataZone = () => {
             )}
           </View>
         </View>
+
+        {/* ── Biometric Log Entries ── */}
+        {bioEntries.length > 0 && (
+          <View className="px-6 mt-6">
+            <Text className="text-text-main font-black text-xl mb-4 tracking-tighter">Biometric Log</Text>
+            {bioEntries.map(entry => {
+              const d = new Date(entry.measured_at);
+              const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+              const isExpanded = expandedBioEntryId === entry.id;
+              const hasDetail = !!(entry.notes || entry.photo_path);
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  activeOpacity={hasDetail ? 0.7 : 1}
+                  onPress={() => hasDetail && setExpandedBioEntryId(isExpanded ? null : entry.id)}
+                  className="bg-surface rounded-[28px] border border-border mb-3 overflow-hidden"
+                >
+                  {/* Summary row */}
+                  <View className="flex-row items-center justify-between px-6 py-5">
+                    <View>
+                      <Text className="text-text-muted font-black text-[10px] uppercase tracking-widest mb-1">{dateStr}</Text>
+                      <View className="flex-row items-center space-x-3">
+                        {entry.body_weight != null && (
+                          <Text className="text-text-main font-black text-base">
+                            {entry.body_weight.toFixed(1)}
+                            <Text className="text-text-muted text-xs"> {weightUnit}</Text>
+                          </Text>
+                        )}
+                        {entry.body_fat_pct != null && (
+                          <Text className="text-text-muted font-black text-sm">{entry.body_fat_pct.toFixed(1)}%</Text>
+                        )}
+                      </View>
+                    </View>
+                    <View className="flex-row items-center space-x-2">
+                      {entry.photo_path && <Text className="text-base">📸</Text>}
+                      {entry.notes && <Text className="text-base">📝</Text>}
+                      {hasDetail && (
+                        <Text className="text-text-muted text-xs font-black ml-1">{isExpanded ? '▲' : '▼'}</Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <View className="px-6 pb-6 border-t border-border pt-4 space-y-4">
+                      {entry.photo_path && (
+                        <Image
+                          source={{ uri: entry.photo_path }}
+                          className="w-full rounded-2xl"
+                          style={{ height: 220 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      {entry.notes && (
+                        <Text className="text-text-main font-medium text-sm leading-5">{entry.notes}</Text>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── Session Notes ── */}
         <View className="px-6 mt-8 mb-4">

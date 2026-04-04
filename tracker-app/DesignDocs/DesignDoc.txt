@@ -49,7 +49,8 @@ Large touch targets, minimal text entry, high contrast.
 Idle State (no active session):
   - Displays today's scheduled workout from the active routine (or the next in the async queue)
   - "Start" button launches the active session engine
-  - Quick-access Biometrics Logger component (body weight + body fat %)
+  - Quick-access Biometrics Logger component (body weight, body fat %, optional notes,
+    optional progress photo attached per entry)
   - Schedule View component showing the current week or async queue at a glance
   - Settings shortcut and "Training" pill indicator in the header
 
@@ -127,6 +128,21 @@ Period Comparison:
 
 Chart: Custom bar chart rendered inline (no third-party charting library).
 Export: Filtered data available as CSV export.
+
+Body Composition:
+  Weekly-averaged body weight and body fat % plotted as a bar chart over the selected
+  timeframe. Toggle between Weight and Body Fat views. Displays latest reading, min/max,
+  and trend % across the period.
+
+Biometric Log:
+  Individual User_Biometrics entries for the selected timeframe, listed newest-first.
+  Each row shows date, weight, and body fat %. Rows with a note or photo display 📝/📸
+  indicators and are tappable to expand, revealing the full-width progress photo and/or
+  note text inline.
+
+Session Notes:
+  All Logged_Sessions with non-empty notes for the selected timeframe, newest-first.
+  Each card shows date, workout name, RPE badge (if present), and the note text.
 
 3.4 Settings Zone
 ──────────────────
@@ -261,7 +277,7 @@ All IDs are client-generated UUIDs (TEXT).
     body_weight   REAL
     body_fat_pct  REAL
     notes         TEXT
-    photo_path    TEXT               -- Local filesystem URI [stub; feature pending]
+    photo_path    TEXT               -- Local filesystem URI from expo-image-picker
     last_modified INTEGER NOT NULL
 
   Active_Session  -- Volatile; cleared on session finish or discard
@@ -419,6 +435,5 @@ Full backup:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   - Desktop sync protocol (vault_connection_token schema present; server-side pending)
-  - Progress photo capture (photo_path column exists; camera/gallery integration pending)
   - Full backup AES-256 encryption and file picker
   - Desktop → Mobile bidirectional sync (out of scope for v1.0)
