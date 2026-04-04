@@ -8,7 +8,7 @@ import { DB } from '../database/db';
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TIMEFRAMES = [4, 8, 12, 24];
-const CHART_HEIGHT = 160;
+const CHART_HEIGHT = 220;
 
 type Metric = 'SETS' | 'E1RM' | 'LOAD' | 'DISTANCE' | 'TIME' | 'RPE';
 
@@ -135,6 +135,19 @@ export const DataZone = () => {
     const sign = val > 0 ? '+' : '';
     return `${sign}${val.toFixed(1)}%`;
   }, []);
+
+  const formatYLabel = useCallback((val: number): string => {
+    switch (selectedMetric) {
+      case 'SETS':     return Math.round(val).toString();
+      case 'RPE':      return val.toFixed(1);
+      case 'TIME':     return Math.round(val).toString();
+      case 'DISTANCE': return val >= 10 ? Math.round(val).toString() : val.toFixed(1);
+      default:         // E1RM, LOAD
+        if (val >= 10000) return `${(val / 1000).toFixed(0)}k`;
+        if (val >= 1000)  return `${(val / 1000).toFixed(1)}k`;
+        return Math.round(val).toString();
+    }
+  }, [selectedMetric]);
 
   const hasData = data.some(p => getMetricPrimaryValue(p) > 0 || p.secondarySets > 0);
 
@@ -463,62 +476,80 @@ export const DataZone = () => {
 
           {/* Chart bars */}
           {!hasData ? (
-            <View className="h-40 items-center justify-center">
+            <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
               <Text className="text-text-muted font-black text-xs uppercase tracking-widest text-center">
                 No sessions logged{'\n'}for this period
               </Text>
               <Text className="text-text-muted text-[10px] mt-2 text-center">Try a longer timeframe</Text>
             </View>
           ) : (
-            <View className="flex-row justify-between items-end h-40 mb-6 px-2">
-              {data.map((point, index) => {
-                const primaryVal = getMetricPrimaryValue(point);
-                const secondaryVal = getMetricSecondaryValue(point);
-                const totalVal = primaryVal + secondaryVal;
+            <View className="flex-row mb-6">
+              {/* Y-axis */}
+              <View style={{ width: 28, height: CHART_HEIGHT }} className="justify-between items-end pr-2">
+                <Text className="text-[8px] font-black text-text-muted">{formatYLabel(maxTotal)}</Text>
+                <Text className="text-[8px] font-black text-text-muted">{formatYLabel(maxTotal / 2)}</Text>
+                <Text className="text-[8px] font-black text-text-muted">0</Text>
+              </View>
+              {/* Bars + x-axis */}
+              <View className="flex-1">
+                <View className="flex-row justify-between items-end px-1" style={{ height: CHART_HEIGHT }}>
+                  {data.map((point) => {
+                    const primaryVal = getMetricPrimaryValue(point);
+                    const secondaryVal = getMetricSecondaryValue(point);
+                    const totalVal = primaryVal + secondaryVal;
 
-                const totalBarHeight = Math.max((totalVal / maxTotal) * CHART_HEIGHT, totalVal > 0 ? 8 : 4);
-                const primaryBarHeight = totalVal > 0
-                  ? Math.max((primaryVal / totalVal) * totalBarHeight, primaryVal > 0 ? 4 : 0)
-                  : totalBarHeight;
-                const secondaryBarHeight = totalBarHeight - primaryBarHeight;
+                    const totalBarHeight = Math.max((totalVal / maxTotal) * CHART_HEIGHT, totalVal > 0 ? 8 : 4);
+                    const primaryBarHeight = totalVal > 0
+                      ? Math.max((primaryVal / totalVal) * totalBarHeight, primaryVal > 0 ? 4 : 0)
+                      : totalBarHeight;
+                    const secondaryBarHeight = totalBarHeight - primaryBarHeight;
 
-                const isEmpty = primaryVal === 0 && secondaryVal === 0;
-                const showLabel = index === 0 || index === data.length - 1 || (selectedWeeks <= 8 && index % 2 === 0);
+                    const isEmpty = primaryVal === 0 && secondaryVal === 0;
 
-                return (
-                  <View key={point.weekStart} className="flex-1 items-center justify-end" style={{ height: CHART_HEIGHT + 24 }}>
-                    {isEmpty ? (
-                      <View className="w-3 rounded-full bg-border/30" style={{ height: 4 }} />
-                    ) : (
-                      <View className="w-3 rounded-full overflow-hidden items-center" style={{ height: totalBarHeight }}>
-                        {/* Secondary on top */}
-                        {secondaryBarHeight > 0 && (
-                          <View
-                            className={`w-full ${selectedMetric === 'SETS' ? 'bg-primary/30' : 'bg-border/30'}`}
-                            style={{ height: secondaryBarHeight }}
-                          />
+                    return (
+                      <View key={point.weekStart} className="flex-1 items-center justify-end" style={{ height: CHART_HEIGHT }}>
+                        {isEmpty ? (
+                          <View className="w-3 rounded-full bg-border/30" style={{ height: 4 }} />
+                        ) : (
+                          <View className="w-3 rounded-full overflow-hidden" style={{ height: totalBarHeight }}>
+                            {secondaryBarHeight > 0 && (
+                              <View
+                                className={`w-full ${selectedMetric === 'SETS' ? 'bg-primary/30' : 'bg-border/30'}`}
+                                style={{ height: secondaryBarHeight }}
+                              />
+                            )}
+                            <View
+                              className={`w-full ${
+                                selectedMetric === 'DISTANCE' || selectedMetric === 'TIME'
+                                  ? 'bg-accent'
+                                  : selectedMetric === 'RPE'
+                                  ? 'bg-primary/60'
+                                  : 'bg-primary'
+                              }`}
+                              style={{ height: primaryBarHeight }}
+                            />
+                          </View>
                         )}
-                        {/* Primary on bottom */}
-                        <View
-                          className={`w-full ${
-                            selectedMetric === 'DISTANCE' || selectedMetric === 'TIME'
-                              ? 'bg-accent'
-                              : selectedMetric === 'RPE'
-                              ? 'bg-primary/60'
-                              : 'bg-primary'
-                          }`}
-                          style={{ height: primaryBarHeight }}
-                        />
                       </View>
-                    )}
-                    {showLabel && (
-                      <Text className="text-[7px] font-black text-text-muted mt-2 rotate-45 origin-left">
-                        {point.weekStart.split('-').slice(1).join('/')}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
+                    );
+                  })}
+                </View>
+                {/* X-axis labels */}
+                <View className="flex-row justify-between px-1 mt-2" style={{ height: 20 }}>
+                  {data.map((point, index) => {
+                    const showLabel = index === 0 || index === data.length - 1 || (selectedWeeks <= 8 && index % 2 === 0);
+                    return (
+                      <View key={point.weekStart} className="flex-1 items-center">
+                        {showLabel && (
+                          <Text className="text-[7px] font-black text-text-muted rotate-45 origin-left">
+                            {point.weekStart.split('-').slice(1).join('/')}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
           )}
         </View>
@@ -672,36 +703,55 @@ export const DataZone = () => {
 
             {/* Bars */}
             {!bioHasData ? (
-              <View className="h-40 items-center justify-center">
+              <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
                 <Text className="text-text-muted font-black text-xs uppercase tracking-widest text-center">
                   No readings logged{'\n'}for this period
                 </Text>
                 <Text className="text-text-muted text-[10px] mt-2 text-center">Log body measurements on the Train tab</Text>
               </View>
             ) : (
-              <View className="flex-row justify-between items-end mb-6 px-2" style={{ height: CHART_HEIGHT + 24 }}>
-                {bioChartData.map((point, index) => {
-                  const val = selectedBioMetric === 'WEIGHT' ? point.avgWeight : point.avgFat;
-                  // Scale within the range so differences are visible
-                  const range = bioMax - bioMin || 1;
-                  const barHeight = val != null
-                    ? Math.max(((val - bioMin) / range) * (CHART_HEIGHT * 0.7) + CHART_HEIGHT * 0.1, 8)
-                    : 4;
-                  const showLabel = index === 0 || index === bioChartData.length - 1 || (selectedWeeks <= 8 && index % 2 === 0);
-                  return (
-                    <View key={point.weekStart} className="flex-1 items-center justify-end" style={{ height: CHART_HEIGHT + 24 }}>
-                      <View
-                        className={`w-3 rounded-full ${val != null ? 'bg-accent' : 'bg-border/30'}`}
-                        style={{ height: barHeight }}
-                      />
-                      {showLabel && (
-                        <Text className="text-[7px] font-black text-text-muted mt-2 rotate-45 origin-left">
-                          {point.weekStart.split('-').slice(1).join('/')}
-                        </Text>
-                      )}
-                    </View>
-                  );
-                })}
+              <View className="flex-row mb-6">
+                {/* Y-axis */}
+                <View style={{ width: 36, height: CHART_HEIGHT }} className="justify-between items-end pr-2">
+                  <Text className="text-[8px] font-black text-text-muted">{bioMax.toFixed(1)}</Text>
+                  <Text className="text-[8px] font-black text-text-muted">{((bioMax + bioMin) / 2).toFixed(1)}</Text>
+                  <Text className="text-[8px] font-black text-text-muted">{bioMin.toFixed(1)}</Text>
+                </View>
+                {/* Bars + x-axis */}
+                <View className="flex-1">
+                  <View className="flex-row justify-between items-end px-1" style={{ height: CHART_HEIGHT }}>
+                    {bioChartData.map((point) => {
+                      const val = selectedBioMetric === 'WEIGHT' ? point.avgWeight : point.avgFat;
+                      const range = bioMax - bioMin || 1;
+                      const barHeight = val != null
+                        ? Math.max(((val - bioMin) / range) * (CHART_HEIGHT * 0.7) + CHART_HEIGHT * 0.1, 8)
+                        : 4;
+                      return (
+                        <View key={point.weekStart} className="flex-1 items-center justify-end" style={{ height: CHART_HEIGHT }}>
+                          <View
+                            className={`w-3 rounded-full ${val != null ? 'bg-accent' : 'bg-border/30'}`}
+                            style={{ height: barHeight }}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                  {/* X-axis labels */}
+                  <View className="flex-row justify-between px-1 mt-2" style={{ height: 20 }}>
+                    {bioChartData.map((point, index) => {
+                      const showLabel = index === 0 || index === bioChartData.length - 1 || (selectedWeeks <= 8 && index % 2 === 0);
+                      return (
+                        <View key={point.weekStart} className="flex-1 items-center">
+                          {showLabel && (
+                            <Text className="text-[7px] font-black text-text-muted rotate-45 origin-left">
+                              {point.weekStart.split('-').slice(1).join('/')}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
               </View>
             )}
 

@@ -15,13 +15,16 @@ import { WorkoutProvider, useWorkout } from './src/store/WorkoutContext';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<'data' | 'athlete' | 'architect'>('athlete');
   const [showBuildHint, setShowBuildHint] = useState(false);
-  const { settings, isLoading } = useWorkout();
+  const [architectModalOpen, setArchitectModalOpen] = useState(false);
+  const { settings, isLoading, activeSession } = useWorkout();
+
+  const navBarHidden = !!activeSession || architectModalOpen;
 
   const renderContent = () => {
     switch (activeTab) {
       case 'data': return <DataZone />;
       case 'athlete': return <AthleteZone />;
-      case 'architect': return <ArchitectZone />;
+      case 'architect': return <ArchitectZone onModalChange={setArchitectModalOpen} />;
       default: return <AthleteZone />;
     }
   };
@@ -52,7 +55,7 @@ function AppContent() {
         {renderContent()}
       </View>
 
-      <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
+      {!navBarHidden && <View className="flex-row bg-surface border-t border-border px-4 py-4 pb-10 shadow-2xl">
           <TouchableOpacity
             onPress={() => setActiveTab('data')}
             className="flex-1 items-center"
@@ -86,7 +89,7 @@ function AppContent() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </View>}
 
       {/* Post-onboarding hint */}
       <Modal visible={showBuildHint} transparent animationType="fade">

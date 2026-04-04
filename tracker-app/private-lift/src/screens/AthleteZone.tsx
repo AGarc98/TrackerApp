@@ -715,7 +715,7 @@ export const AthleteZone = () => {
         <TouchableOpacity 
           onPress={stopTimer}
           activeOpacity={0.9}
-          className="absolute bottom-40 self-center bg-primary px-10 py-5 rounded-full shadow-2xl shadow-primary/30 flex-row items-center space-x-4 border-4 border-surface"
+          className="absolute bottom-52 self-center bg-primary px-10 py-5 rounded-full shadow-2xl shadow-primary/30 flex-row items-center space-x-4 border-4 border-surface"
         >
           <View className="w-2.5 h-2.5 bg-surface rounded-full" style={{ opacity: 0.8 }} />
           <Text className="text-surface font-black text-xl tabular-nums tracking-widest">REST: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>

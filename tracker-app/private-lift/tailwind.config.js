@@ -9,24 +9,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "var(--color-background)",
-        surface: "var(--color-surface)",
+        background: "rgb(var(--color-background) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
         primary: {
-          DEFAULT: "var(--color-primary)",
-          soft: "var(--color-primary-soft)",
+          DEFAULT: "rgb(var(--color-primary) / <alpha-value>)",
+          soft: "rgb(var(--color-primary-soft) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "var(--color-accent)",
-          soft: "var(--color-accent-soft)",
+          DEFAULT: "rgb(var(--color-accent) / <alpha-value>)",
+          soft: "rgb(var(--color-accent-soft) / <alpha-value>)",
         },
         text: {
-          main: "var(--color-text-main)",
-          muted: "var(--color-text-muted)",
+          main: "rgb(var(--color-text-main) / <alpha-value>)",
+          muted: "rgb(var(--color-text-muted) / <alpha-value>)",
         },
-        border: "var(--color-border)",
-        success: "var(--color-success)",
-        warning: "var(--color-warning)",
-        error: "var(--color-error)",
+        border: "rgb(var(--color-border) / <alpha-value>)",
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        warning: "rgb(var(--color-warning) / <alpha-value>)",
+        error: "rgb(var(--color-error) / <alpha-value>)",
       }
     },
   },

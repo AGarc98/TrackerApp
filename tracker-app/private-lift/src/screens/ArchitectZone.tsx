@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DB } from '../database/db';
 import { MuscleGroup, ExerciseType, Routine, RoutineMode, Workout, ExerciseWithMuscle } from '../types/database';
 import { useWorkout } from '../store/WorkoutContext';
@@ -56,8 +57,10 @@ const START_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const ArchitectZone = () => {
+export const ArchitectZone = ({ onModalChange }: { onModalChange?: (open: boolean) => void }) => {
   const { setActiveRoutine, activeRoutineId, settings } = useWorkout();
+  const insets = useSafeAreaInsets();
+  const modalPb = insets.bottom + 24;
   const [activeSubTab, setActiveSubTab] = useState<'routines' | 'workouts' | 'exercises'>('routines');
   const [exercises, setExercises] = useState<ExerciseWithMuscle[]>([]);
   const [days, setDays] = useState<UIWorkout[]>([]);
@@ -91,6 +94,22 @@ export const ArchitectZone = () => {
   const [importBundle, setImportBundle] = useState<any | null>(null);
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [importStrategyModalVisible, setImportStrategyModalVisible] = useState(false);
+
+  useEffect(() => {
+    const anyOpen = exerciseModalVisible || dayModalVisible || routineModalVisible
+      || importModalVisible || exportModalVisible || importStrategyModalVisible;
+    onModalChange?.(anyOpen);
+  }, [exerciseModalVisible, dayModalVisible, routineModalVisible, importModalVisible, exportModalVisible, importStrategyModalVisible]);
+
+  const moveExercise = (from: number, to: number) => {
+    setEditingDay(prev => {
+      if (!prev) return null;
+      const newExs = [...prev.exercises];
+      const [removed] = newExs.splice(from, 1);
+      newExs.splice(to, 0, removed);
+      return { ...prev, exercises: newExs };
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -163,7 +182,7 @@ export const ArchitectZone = () => {
       : [];
     const ab_weeks_enabled = week_numbers.some(w => w === 1);
     if (item.mode === RoutineMode.WEEKLY) {
-      mappings.forEach((m: any) => { if (m.order_index < 7) workout_mappings[m.order_index] = m.workout_id; });
+      mappings.forEach((m: any) => { if (m.day_of_week != null && m.day_of_week >= 0 && m.day_of_week < 7) workout_mappings[m.day_of_week] = m.workout_id; });
     }
     setEditingRoutine({ ...item, workout_mappings, week_numbers, ab_weeks_enabled });
     setRoutineModalVisible(true);
@@ -895,7 +914,7 @@ export const ArchitectZone = () => {
       <Modal visible={exerciseModalVisible} animationType="fade" transparent statusBarTranslucent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
           <View className="flex-1 justify-end bg-black/60">
-            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+            <View className="bg-surface rounded-t-[40px] p-8 shadow-2xl h-[92%]" style={{ paddingBottom: modalPb }}>
               <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-6">
                 {editingExercise?.id ? 'Edit Exercise' : 'New Exercise'}
@@ -990,9 +1009,9 @@ export const ArchitectZone = () => {
 
       {/* ─── Workout Modal ─────────────────────────────────────────────────── */}
       <Modal visible={dayModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-black/60">
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-surface rounded-t-[40px] p-8 shadow-2xl h-[92%]" style={{ paddingBottom: modalPb }}>
               <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-6">
                 {editingDay?.id ? 'Edit Workout' : 'New Workout'}
@@ -1054,14 +1073,33 @@ export const ArchitectZone = () => {
                   const showWeight = ex.type === ExerciseType.STRENGTH || ex.type === ExerciseType.WEIGHTED_BW;
                   const showTime = ex.type === ExerciseType.ENDURANCE || ex.type === ExerciseType.ISOMETRIC;
                   const showDistance = ex.type === ExerciseType.ENDURANCE;
+                  const isFirst = idx === 0;
+                  const isLast = idx === editingDay.exercises.length - 1;
 
                   return (
                     <View
-                      key={idx}
+                      key={ex.id}
                       className={`bg-background rounded-3xl p-5 mb-3 border ${isInSuperset ? 'border-primary/40' : 'border-border'}`}
                     >
                       <View className="flex-row justify-between items-center mb-3">
                         <View className="flex-row items-center flex-1 mr-2">
+                          {/* Reorder buttons */}
+                          <View className="mr-3 gap-1">
+                            <TouchableOpacity
+                              onPress={() => moveExercise(idx, idx - 1)}
+                              disabled={isFirst}
+                              className={`w-7 h-7 rounded-lg items-center justify-center border ${isFirst ? 'bg-surface border-border opacity-30' : 'bg-surface border-border'}`}
+                            >
+                              <Text className="text-text-muted text-xs leading-none font-black">▲</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => moveExercise(idx, idx + 1)}
+                              disabled={isLast}
+                              className={`w-7 h-7 rounded-lg items-center justify-center border ${isLast ? 'bg-surface border-border opacity-30' : 'bg-surface border-border'}`}
+                            >
+                              <Text className="text-text-muted text-xs leading-none font-black">▼</Text>
+                            </TouchableOpacity>
+                          </View>
                           {isInSuperset && (
                             <View className="bg-primary-soft px-1.5 py-0.5 rounded mr-2">
                               <Text className="text-[8px] font-black text-primary uppercase">SS</Text>
@@ -1143,16 +1181,16 @@ export const ArchitectZone = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
-          {renderPickerOverlay()}
-        </View>
+            {renderPickerOverlay()}
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ─── Routine Modal ─────────────────────────────────────────────────── */}
       <Modal visible={routineModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-black/60">
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[92%]">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-surface rounded-t-[40px] p-8 shadow-2xl h-[92%]" style={{ paddingBottom: modalPb }}>
               <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-6">
                 {editingRoutine?.id ? 'Edit Routine' : 'New Routine'}
@@ -1327,9 +1365,9 @@ export const ArchitectZone = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
-          {renderPickerOverlay()}
-        </View>
+            {renderPickerOverlay()}
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ─── Import Conflict Strategy Modal ───────────────────────────────── */}
@@ -1401,9 +1439,9 @@ export const ArchitectZone = () => {
 
       {/* ─── Export Routine Modal ──────────────────────────────────────────── */}
       <Modal visible={exportModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-black/60">
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[85%]">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-surface rounded-t-[40px] p-8 shadow-2xl h-[85%]" style={{ paddingBottom: modalPb }}>
               <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-1">Export Routine</Text>
               <Text className="text-text-muted text-xs font-medium mb-6 leading-5">
@@ -1419,15 +1457,15 @@ export const ArchitectZone = () => {
                 <Text className="text-surface font-black text-center text-sm uppercase tracking-widest">Done</Text>
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ─── Import Routine Modal ──────────────────────────────────────────── */}
       <Modal visible={importModalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View className="flex-1 justify-end bg-black/60">
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-            <View className="bg-surface rounded-t-[40px] p-8 pb-12 shadow-2xl h-[85%]">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="bg-surface rounded-t-[40px] p-8 shadow-2xl h-[85%]" style={{ paddingBottom: modalPb }}>
               <View className="w-12 h-1.5 bg-border rounded-full self-center mb-6" />
               <Text className="text-2xl font-black text-text-main mb-1">Import Routine</Text>
               <Text className="text-text-muted text-xs font-medium mb-6 leading-5">
@@ -1459,8 +1497,8 @@ export const ArchitectZone = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
     </View>

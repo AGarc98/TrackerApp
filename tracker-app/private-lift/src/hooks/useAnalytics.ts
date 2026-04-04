@@ -169,7 +169,7 @@ export const useAnalytics = (
           // RPE: average per session, then average those per week
           const sessionRPEMap = new Map<string, number>();
           weekSets.forEach((s: any) => {
-            if (s.is_primary === 1) {
+            if (s.is_primary) {
               primarySets++;
             } else {
               secondarySets++;
